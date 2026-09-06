@@ -1,42 +1,45 @@
-/* Homepage-only logo; the existing hero photos remain visible through the canvas. */
-#hero .hero-content {
-    width: min(100%, 1180px);
+/* Home intro: two-second formation, one-second flight to the header. */
+#hero .hero-content { width: min(100%, 1180px); pointer-events: none; }
+#home-hero-copy { opacity: 1; }
+.home-logo-intro #home-hero-copy { opacity: 0; }
+.hero-logo-stage {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(calc(100% - 48px), 1050px);
+    aspect-ratio: 8 / 3;
+    z-index: 2;
     pointer-events: none;
 }
-
-#hero .hero-content .hero-logo-title {
-    width: min(100%, 1050px);
-    margin: 0 auto;
-    font-size: inherit;
-    line-height: 1;
-    letter-spacing: normal;
+.hero-logo-stage canvas { display: block; width: 100%; height: auto; }
+.hero-logo-stage[hidden], .hero-logo-stage > [hidden] { display: none; }
+.home-logo-flight {
+    position: fixed;
+    z-index: 10050;
+    pointer-events: none;
+    transform-origin: 0 0;
 }
-
-.hero-logo-stage {
-    position: relative;
-    display: block;
-    width: 100%;
-    aspect-ratio: 8 / 3;
-    filter: drop-shadow(0 3px 12px rgba(0, 0, 0, .25));
+#navbar .home-header-logo { width: 112px; height: 42px; }
+#navbar .home-header-logo picture { width: 100%; height: 100%; }
+#navbar .home-header-logo img { width: 100%; height: 100%; object-fit: contain; }
+#navbar .home-header-logo .home-header-logo-fallback {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
 }
-
-.hero-logo-stage canvas {
-    display: block;
-    width: 100%;
-    height: auto;
-    background: transparent;
-}
-
-.hero-logo-fallback {
-    position: absolute;
-    top: 4.3833%;
-    left: 4.20625%;
-    width: 91.35%;
-    height: auto;
-}
-
-.hero-logo-stage > [hidden] { display: none; }
-
+#navbar .home-header-logo .home-header-logo-fallback[hidden] { display: none; }
+#navbar .home-header-logo.has-logo-fallback picture { visibility: hidden; }
+.home-logo-intro #navbar .home-header-logo picture,
+.home-logo-intro #navbar .home-header-logo .home-header-logo-fallback { visibility: hidden; }
+#hero .home-hero-scroll { cursor: pointer; pointer-events: auto; z-index: 4; }
+#hero .home-hero-scroll span { pointer-events: none; }
+#home-sections-root { scroll-margin-top: 120px; }
 @media (max-width: 600px) {
-    #hero .hero-content { padding-inline: 28px; }
+    #navbar .home-header-logo { width: 42px; }
+    .hero-logo-stage { width: calc(100% - 56px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .home-logo-intro #home-hero-copy { opacity: 1 !important; }
+    .home-logo-intro #navbar .home-header-logo picture,
+    .home-logo-intro #navbar .home-header-logo .home-header-logo-fallback { visibility: visible; }
+    .hero-logo-stage, .home-logo-flight { display: none !important; }
 }

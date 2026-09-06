@@ -89,96 +89,185 @@ function createLogoMotion(ctx, logo, makeCanvas) {
 
     const canvas = document.getElementById('home-logo-canvas');
     const logo = document.getElementById('home-logo-fallback');
-    if (!canvas || !logo) return;
+    const stage = document.getElementById('home-logo-stage');
+    const copy = document.getElementById('home-hero-copy');
+    const headerLogo = document.querySelector('#navbar .home-header-logo');
+    const headerImage = headerLogo?.querySelector('picture img');
+    const root = document.documentElement;
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (preference.matches) return;
+    const mobile = window.matchMedia('(max-width: 600px)');
+    const makeCanvas = (width, height) => {
+        const c = document.createElement('canvas');
+        c.width = width; c.height = height;
+        return c;
+    };
 
-    const DURATION = 5.45;
-    const PLAYBACK_SPEED = DURATION / 2; // Same timeline, played in 2 seconds.
-    let render = null;
-    let frameId = 0;
-    let elapsed = 0;
-    let previousTime = null;
-    let inView = true;
-    let observer = null;
-    let finished = false;
+    // Handle this link before the generic same-page anchor listener.
+    const arrow = document.querySelector('.home-hero-scroll');
+    let waitingForSections = false;
+    let pendingScrollTimer = 0;
+    function scrollToSections() {
+        const sections = document.getElementById('home-sections-root');
+        if (!sections) return;
+        const target = sections.firstElementChild || sections;
+        const headerBottom = document.getElementById('navbar')?.getBoundingClientRect().bottom || 100;
+        const top = Math.max(0, window.scrollY + target.getBoundingClientRect().top - headerBottom - 20);
+        window.scrollTo({ top, behavior: preference.matches ? 'instant' : 'smooth' });
+        sections.focus({ preventScroll: true });
+    }
+    function stopWaitingForSections() {
+        waitingForSections = false;
+        window.clearTimeout(pendingScrollTimer);
+    }
+    window.addEventListener('kmc:home-sections-rendered', () => {
+        if (waitingForSections) { stopWaitingForSections(); scrollToSections(); }
+    });
+    // Do not pull visitors back if they have deliberately scrolled elsewhere.
+    window.addEventListener('wheel', stopWaitingForSections, { passive: true });
+    window.addEventListener('touchstart', stopWaitingForSections, { passive: true });
+    arrow?.addEventListener('click', event => {
+        if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        event.stopPropagation();
+        scrollToSections();
+        if (!document.getElementById('home-sections-root')?.firstElementChild) {
+            waitingForSections = true;
+            window.clearTimeout(pendingScrollTimer);
+            pendingScrollTimer = window.setTimeout(stopWaitingForSections, 10000);
+        }
+    });
+
+    if (!canvas || !logo || !stage || !copy || !headerLogo) return;
+    const FORMATION_SECONDS = 2;
+    const FLIGHT_SECONDS = 1;
+    const ORIGINAL_TIMELINE = 5.45;
+    let frameId = 0, elapsed = 0, previousTime = null;
+    let render = null, snapshot = null, flying = false, finished = false;
+    let headerFallback = null;
+    const smooth = p => p * p * p * (p * (p * 6 - 15) + 10);
+    const lerp = (a, b, p) => a + (b - a) * p;
+
+    // Preserve the configured header image. Supply a local fallback if it cannot load.
+    function updateHeaderFallback() {
+        if (!logo.naturalWidth) return;
+        if (!headerFallback) {
+            headerFallback = makeCanvas(1044, 391);
+            headerFallback.className = 'home-header-logo-fallback';
+            headerFallback.setAttribute('aria-hidden', 'true');
+            headerLogo.appendChild(headerFallback);
+        }
+        const isMobile = mobile.matches;
+        headerFallback.width = isMobile ? 386 : 1044;
+        const c = headerFallback.getContext('2d');
+        if (!c) { headerFallback.hidden = true; return; }
+        c.clearRect(0, 0, headerFallback.width, 391);
+        c.drawImage(logo, 0, 0, headerFallback.width, 391, 0, 0, headerFallback.width, 391);
+        const valid = headerImage?.complete && headerImage.naturalWidth > 0;
+        headerFallback.hidden = Boolean(valid);
+        headerLogo.classList.toggle('has-logo-fallback', !valid);
+    }
+    headerImage?.addEventListener('load', updateHeaderFallback);
+    headerImage?.addEventListener('error', updateHeaderFallback);
+    mobile.addEventListener('change', updateHeaderFallback);
 
     function pause() {
-        window.cancelAnimationFrame(frameId);
-        frameId = 0;
-        previousTime = null;
+        window.cancelAnimationFrame(frameId); frameId = 0; previousTime = null;
     }
-
-    function detach() {
-        pause();
-        observer?.disconnect();
-        document.removeEventListener('visibilitychange', syncPlayback);
-        preference.removeEventListener('change', onMotionPreference);
-    }
-
     function finish() {
-        render(DURATION);
+        if (finished) return;
         finished = true;
-        detach();
-        render = null;
+        pause();
+        stage.hidden = true;
+        canvas.hidden = true;
+        canvas.classList.remove('home-logo-flight');
+        canvas.removeAttribute('style');
+        stage.appendChild(canvas);
+        root.classList.remove('home-logo-intro');
+        copy.style.removeProperty('opacity');
+        updateHeaderFallback();
+        document.removeEventListener('visibilitychange', syncPlayback);
+        preference.removeEventListener('change', motionChanged);
+        window.removeEventListener('pagehide', finish);
+        render = null; snapshot = null;
     }
-
+    function beginFlight() {
+        render(ORIGINAL_TIMELINE);
+        snapshot = makeCanvas(1280, 480);
+        snapshot.getContext('2d').drawImage(canvas, 0, 0);
+        // Escape the hero's overflow clipping and the header's backdrop filter.
+        document.body.appendChild(canvas);
+        canvas.classList.add('home-logo-flight');
+        canvas.setAttribute('aria-hidden', 'true');
+        flying = true;
+    }
+    function drawFlight(p) {
+        const eased = smooth(p);
+        // Measure each frame so scrolling, resizing and orientation changes stay aligned.
+        const from = stage.getBoundingClientRect();
+        const box = headerLogo.getBoundingClientRect();
+        const isMobile = mobile.matches;
+        const art = isMobile
+            ? { x: 53.84, y: 21.04, w: 432.32, h: 437.92 }
+            : { x: 53.84, y: 21.04, w: 1169.28, h: 437.92 };
+        const scale = Math.min(box.width / art.w, box.height / art.h);
+        const destination = {
+            x: box.left + (box.width - art.w * scale) / 2 - art.x * scale,
+            y: box.top + (box.height - art.h * scale) / 2 - art.y * scale,
+            w: 1280 * scale,
+            h: 480 * scale
+        };
+        canvas.style.left = `${lerp(from.left, destination.x, eased)}px`;
+        canvas.style.top = `${lerp(from.top, destination.y, eased)}px`;
+        canvas.style.width = `${lerp(from.width, destination.w, eased)}px`;
+        canvas.style.height = `${lerp(from.height, destination.h, eased)}px`;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 1280, 480);
+        ctx.drawImage(snapshot, 0, 0, 520, 480, 0, 0, 520, 480);
+        ctx.globalAlpha = isMobile ? 1 - eased : 1;
+        ctx.drawImage(snapshot, 520, 0, 760, 480, 520, 0, 760, 480);
+        ctx.globalAlpha = 1;
+        copy.style.opacity = String(eased);
+    }
     function tick(now) {
         frameId = 0;
-        if (finished || document.hidden || !inView) { previousTime = null; return; }
-        if (previousTime !== null) elapsed += (Math.max(0, now - previousTime) / 1000) * PLAYBACK_SPEED;
+        if (finished || document.hidden) { previousTime = null; return; }
+        if (previousTime !== null) elapsed += Math.max(0, now - previousTime) / 1000;
         previousTime = now;
-        if (elapsed >= DURATION) { finish(); return; }
-        render(elapsed);
+        if (elapsed >= FORMATION_SECONDS + FLIGHT_SECONDS) { finish(); return; }
+        if (elapsed < FORMATION_SECONDS) render(elapsed * ORIGINAL_TIMELINE / FORMATION_SECONDS);
+        else {
+            if (!flying) beginFlight();
+            drawFlight(Math.min(1, (elapsed - FORMATION_SECONDS) / FLIGHT_SECONDS));
+        }
         frameId = window.requestAnimationFrame(tick);
     }
-
     function syncPlayback() {
         if (finished || !render) return;
-        if (document.hidden || !inView) pause();
+        if (document.hidden) pause();
         else if (!frameId) frameId = window.requestAnimationFrame(tick);
     }
-
-    function onMotionPreference() {
-        if (preference.matches && render) finish();
-    }
-
+    function motionChanged() { if (preference.matches) finish(); }
     function initialize() {
-        if (!logo.naturalWidth || preference.matches) return;
+        if (!logo.naturalWidth) return;
         try {
+            updateHeaderFallback();
+            if (preference.matches) return;
             const ctx = canvas.getContext('2d');
             if (!ctx) return;
-            render = createLogoMotion(ctx, logo, (width, height) => {
-                const layer = document.createElement('canvas');
-                layer.width = width;
-                layer.height = height;
-                return layer;
-            });
+            render = createLogoMotion(ctx, logo, makeCanvas);
             render(0);
+            root.classList.add('home-logo-intro');
+            stage.hidden = false;
             canvas.hidden = false;
-            logo.hidden = true;
-            const bounds = canvas.getBoundingClientRect();
-            inView = bounds.bottom > 0 && bounds.top < window.innerHeight;
-            if ('IntersectionObserver' in window) {
-                observer = new IntersectionObserver(entries => {
-                    inView = entries[0].isIntersecting;
-                    syncPlayback();
-                });
-                observer.observe(canvas);
-            }
             document.addEventListener('visibilitychange', syncPlayback);
-            preference.addEventListener('change', onMotionPreference);
+            preference.addEventListener('change', motionChanged);
+            window.addEventListener('pagehide', finish);
             syncPlayback();
         } catch (error) {
-            // Preserve the static logo if canvas or pixel access is unavailable.
-            detach();
-            canvas.hidden = true;
-            logo.hidden = false;
-            render = null;
+            finish();
             console.warn('Homepage logo animation unavailable:', error);
         }
     }
-
     if (logo.complete) initialize();
     else logo.addEventListener('load', initialize, { once: true });
 })();
