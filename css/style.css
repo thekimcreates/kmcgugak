@@ -2642,3 +2642,6 @@ footer img {
     transform: translate(-50%, -50%);
     margin: 0;
 }
+
+/* Preserve natural English month casing on performance cards. */
+.performance-card .performance-date-time { text-transform: none; }

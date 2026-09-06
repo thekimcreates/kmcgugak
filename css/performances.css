@@ -1723,3 +1723,26 @@ body.performance-gallery-viewer-open {
 
     .performance-public-card .performance-card-content { padding-right: 82px; }
 }
+
+/* Natural date casing and a year chooser matching the arrangements menu. */
+.performance-public-card .performance-date-time,
+.performance-detail-date-time { text-transform: none; }
+#performance-year[hidden] { display: none !important; }
+#performance-year-filter { position: relative; }
+.performance-year-popover { max-height: min(340px, 55vh); overflow-y: auto; }
+.performance-year-option {
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%; padding: 12px 14px; border: 0; border-radius: 10px;
+    background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.performance-year-option:hover, .performance-year-option:focus-visible { background: rgba(127,0,32,.08); outline: none; }
+.performance-year-option[aria-selected="true"] { color: #7f0020; font-weight: 700; }
+.performance-year-option[aria-selected="true"]::after { content: "✓"; }
+#performance-year-trigger { width: 100%; }
+#performance-year-filter.is-open .performance-filter-chevron { transform: rotate(225deg); }
+@media (prefers-color-scheme: dark) {
+    .performance-year-option[aria-selected="true"] { color: #ffb3c0; }
+    .performance-year-option:hover, .performance-year-option:focus-visible { background: rgba(255,179,192,.12); }
+}
+
+#performance-year-popover { left: auto; right: 0; width: max(100%, 180px); max-width: calc(100vw - 48px); }

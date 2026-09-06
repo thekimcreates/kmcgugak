@@ -8,22 +8,8 @@
         signature: ""
     };
 
-    function formatDate(value) {
-        if (!value) return "Date unavailable";
-        const date = new Date(`${value}T12:00:00`);
-        return Number.isNaN(date.getTime()) ? String(value) : new Intl.DateTimeFormat("en-US", {
-            month: "long", day: "numeric", year: "numeric"
-        }).format(date);
-    }
-
-    function formatTime(performance) {
-        if (performance.timeTbd) return "Time TBD";
-        if (!performance.time) return "";
-        const [hour, minute] = String(performance.time).split(":").map(Number);
-        if (!Number.isFinite(hour) || !Number.isFinite(minute)) return String(performance.time);
-        return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" })
-            .format(new Date(2000, 0, 1, hour, minute));
-    }
+    const formatDate = value => window.KMCPerformanceFormat.date(value);
+    const formatTime = record => window.KMCPerformanceFormat.time(record);
 
     function arrangementLabels(performance) {
         const byId = new Map(state.arrangements.map(item => [item.id, item]));

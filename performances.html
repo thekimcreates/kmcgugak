@@ -23,10 +23,10 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="css/style.css?v=20260830about1">
-    <link rel="stylesheet" href="css/performances.css?v=20260905zoomgate1">
+    <link rel="stylesheet" href="css/style.css?v=20260906polish2">
+    <link rel="stylesheet" href="css/performances.css?v=20260906polish2">
 <link rel="stylesheet" href="css/site-polish.css?v=20260905polish1">
-    <link rel="stylesheet" href="css/gallery-upload.css?v=20260906upload1">
+    <link rel="stylesheet" href="css/gallery-upload.css?v=20260906polish2">
 </head>
 
 <body class="performances-page">
@@ -129,12 +129,16 @@
                     </div>
                 </div>
 
-                <label class="performance-year-filter" for="performance-year">
-                    <span>Filter by Year</span>
-                    <select id="performance-year" disabled>
+                <div class="performance-year-filter" id="performance-year-filter">
+                    <span id="performance-year-label" class="performance-filter-label">Filter by Year</span>
+                    <select id="performance-year" hidden aria-hidden="true" tabindex="-1" disabled>
                         <option value="all">All</option>
                     </select>
-                </label>
+                    <button id="performance-year-trigger" class="performance-arrangement-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="performance-year-popover" aria-labelledby="performance-year-label performance-year-summary" disabled>
+                        <span id="performance-year-summary">All</span><span class="performance-filter-chevron" aria-hidden="true"></span>
+                    </button>
+                    <div id="performance-year-popover" class="performance-arrangement-popover performance-year-popover" role="listbox" aria-labelledby="performance-year-label" hidden></div>
+                </div>
             </div>
 
             <div
@@ -294,7 +298,9 @@
 
 <script defer src="js/video-preview.js?v=20260905firstframe2"></script>
 <script defer src="js/performance-list-data.js?v=20260905polish1"></script>
-<script defer src="js/performances.js?v=20260906upload1"></script>
+<script defer src="js/performance-format.js?v=20260906polish2"></script>
+<script defer src="js/performances.js?v=20260906polish2"></script>
 
+<script defer src="js/performance-year-filter.js?v=20260906polish2"></script>
 </body>
 </html>

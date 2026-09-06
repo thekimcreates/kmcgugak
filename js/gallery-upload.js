@@ -14,16 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
     let dropTimer = 0, returnTimer = 0, dragDepth = 0, verifyController = null;
 
     const locationLabel = record => record.locationTbd ? "Location TBD" : record.locationName || record.location || "Location unavailable";
-    const dateLabel = value => {
+    const galleryDateLabel = value => {
         const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
         return match ? `${match[2]}/${match[3]}/${match[1]}` : "Date unavailable";
     };
-    const timeLabel = record => {
-        if (record.timeTbd) return "Time TBD";
-        if (!/^\d{2}:\d{2}/.test(record.time || "")) return "Time unavailable";
-        const [hours, minutes] = record.time.split(":").map(Number);
-        return `${hours % 12 || 12}:${String(minutes).padStart(2, "0")} ${hours >= 12 ? "PM" : "AM"}`;
-    };
+    const dateLabel = value => window.KMCPerformanceFormat.date(value);
+    const timeLabel = record => window.KMCPerformanceFormat.time(record);
     const arrangements = record => record.arrangementsTbd ? "Arrangements TBD" : (record.arrangements || []).join(" • ");
     const durationLabel = seconds => {
         const total = Math.floor(seconds || 0), minutes = Math.floor(total / 60);
@@ -131,7 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const source = $("upload-card-wrap").firstElementChild;
         const from = source.getBoundingClientRect();
         const clone = source.cloneNode(true);
-        $("upload-workspace-title").textContent = `${locationLabel(selected)} ${dateLabel(selected.date)} - Gallery Upload`;
+        $("upload-workspace-title").textContent = `${locationLabel(selected)} ${galleryDateLabel(selected.date)} - Gallery Upload`;
         stage("upload-workspace");
         const title = $("upload-workspace-title");
         if (!reducedMotion.matches && clone.animate && from.width > 0) {

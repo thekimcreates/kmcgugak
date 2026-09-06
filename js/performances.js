@@ -113,30 +113,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return String(value || "").replaceAll('"', "%22");
     }
 
-    function formatDate(value) {
-        if (!value) return "Date TBD";
-        const date = new Date(`${value}T12:00:00`);
-        if (Number.isNaN(date.getTime())) return value;
-
-        return new Intl.DateTimeFormat("en-US", {
-            month: "long",
-            day: "numeric",
-            year: "numeric"
-        }).format(date);
-    }
-
-    function formatTime(record) {
-        if (record.timeTbd) return "Time TBD";
-        if (!record.time) return "Time unavailable";
-
-        const [hour, minute] = record.time.split(":").map(Number);
-        const date = new Date(2000, 0, 1, hour, minute);
-
-        return new Intl.DateTimeFormat("en-US", {
-            hour: "numeric",
-            minute: "2-digit"
-        }).format(date);
-    }
+    const formatDate = value => window.KMCPerformanceFormat.date(value);
+    const formatTime = record => window.KMCPerformanceFormat.time(record);
 
     function getLocation(record) {
         if (record.locationTbd) return "Location TBD";
