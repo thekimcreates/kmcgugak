@@ -160,9 +160,8 @@
                         <fieldset class="admin-subsection performance-gallery-admin-section">
                             <legend>Gallery</legend>
                             <div class="admin-field">
-                                <label for="performance-gallery">Upload photos and videos</label>
-                                <input id="performance-gallery" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" multiple>
-                                <p class="admin-help-text">Choose multiple photos or videos. Videos up to 500 MB are supported.</p>
+                                <a id="performance-gallery-upload-link" class="gallery-upload-button" target="_blank" rel="noopener" aria-disabled="true" tabindex="-1">Upload Files</a>
+                                <p id="performance-gallery-upload-help" class="admin-help-text">Save this performance first to upload files.</p>
                             </div>
                             <button id="performance-gallery-download" class="admin-secondary-button" type="button" hidden>Download all as ZIP</button>
                             <p id="performance-gallery-summary" class="performance-gallery-admin-summary">No gallery items selected.</p>
@@ -266,7 +265,7 @@
     <script src="../js/image-optimizer.js?v=20260725p3a"></script><script src="../js/video-preview.js?v=20260905firstframe2"></script>
     <script src="../js/vendor/jszip.min.js?v=3.10.1"></script>
     <script src="../js/gallery-zip.js?v=20260905galleryzip1"></script>
-    <script src="../js/performance-list-data.js?v=20260905polish1"></script><script src="../js/gallery-upload-api.js?v=20260906upload1"></script><script src="../js/admin-performances.js?v=20260906upload1"></script>
+    <script src="../js/performance-list-data.js?v=20260905polish1"></script><script src="../js/gallery-upload-api.js?v=20260906upload1"></script><script src="../js/admin-performances.js?v=20260906uploadlinks"></script>
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD-MVpD9Qvsag1sJKHblNsBdQXZDXPTbMI&libraries=places&callback=initializeKmcPerformanceMap"></script>
     
 <script src="../js/admin-header.js?v=20260905polish1"></script></body>

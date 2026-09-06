@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const highlightPreviewWrap = get("performance-highlight-preview-wrap");
     const highlightPreview = get("performance-highlight-preview");
     const highlightRemove = get("performance-highlight-remove");
-    const galleryInput = get("performance-gallery");
+    const galleryUploadLink = get("performance-gallery-upload-link");
     const galleryList = get("performance-gallery-list");
     const gallerySummary = get("performance-gallery-summary");
     const galleryDownloadButton = get("performance-gallery-download");
@@ -755,6 +755,20 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     function renderGalleryFiles() {
+        const performanceId = idInput.value;
+        if (performanceId) {
+            galleryUploadLink.href = `../upload#${encodeURIComponent(performanceId)}`;
+            galleryUploadLink.removeAttribute("aria-disabled");
+            galleryUploadLink.removeAttribute("tabindex");
+        } else {
+            galleryUploadLink.removeAttribute("href");
+            galleryUploadLink.setAttribute("aria-disabled", "true");
+            galleryUploadLink.setAttribute("tabindex", "-1");
+        }
+        galleryUploadLink.style.opacity = performanceId ? "" : "0.5";
+        get("performance-gallery-upload-help").textContent = performanceId
+            ? "Opens the upload page in a new tab. Enter this performance’s upload code to continue."
+            : "Save this performance first to upload files.";
         galleryDownloadButton.hidden = !idInput.value;
         galleryDownloadButton.disabled = submitButton.disabled || !(galleryItems.length + pendingGalleryFiles.length);
         const items = sortGalleryItems([
@@ -885,7 +899,6 @@ document.addEventListener("DOMContentLoaded", () => {
         galleryItems = [];
         pendingGalleryFiles = [];
         galleryPathsToDelete = [];
-        galleryInput.value = "";
         renderGalleryFiles();
         clearPreview();
         linksList.replaceChildren();
@@ -1008,7 +1021,6 @@ document.addEventListener("DOMContentLoaded", () => {
         baseGalleryKeys = new Set(galleryItems.map(galleryKey));
         pendingGalleryFiles = [];
         galleryPathsToDelete = [];
-        galleryInput.value = "";
         renderGalleryFiles();
 
         linksList.replaceChildren();
@@ -1105,68 +1117,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return { url: await snapshot.ref.getDownloadURL(), path, optimization: optimized };
     }
 
-    async function uploadGalleryFiles(documentId) {
-        const queue = [...pendingGalleryFiles];
-        const uploaded = new Array(queue.length);
-        let nextIndex = 0;
-        let completed = 0;
-
-        async function uploadNext() {
-            const index = nextIndex++;
-            if (index >= queue.length) return;
-            const entry = queue[index];
-            const file = entry.file;
-            const video = entry.type === "video";
-            let blob = file;
-            let fileName = file.name;
-            let mimeType = file.type || (video ? "video/mp4" : "image/jpeg");
-            if (!video) {
-                if (!imageOptimizer) throw new Error("The image optimizer could not be loaded. Refresh the page and try again.");
-                setStatus(`Preparing gallery files… ${completed} of ${queue.length} complete`);
-                const optimized = await imageOptimizer.optimize(file, {
-                    maxWidth: 2000,
-                    maxHeight: 2000,
-                    quality: 0.84,
-                    maxInputBytes: 500 * 1024 * 1024
-                });
-                blob = optimized.blob;
-                fileName = optimized.fileName;
-                mimeType = optimized.contentType;
-            } else {
-                setStatus(`Uploading gallery files… ${completed} of ${queue.length} complete`);
-            }
-            // Gallery assets share the approved performance-highlights prefix.
-            // The site's current Firebase Storage policy already allows admins to
-            // write there, while a new top-level performance-gallery prefix is
-            // denied by that policy.
-            const path = `performance-highlights/${documentId}/gallery-${Date.now()}-${index}-${fileName}`;
-            const assetUpload = storage.ref(path).put(blob, {
-                contentType: mimeType,
-                cacheControl: "public,max-age=31536000,immutable"
-            });
-            const thumbnailUpload = (video ? createVideoThumbnail(file) : createImageThumbnail(blob))
-                .then(thumbnail => uploadGalleryThumbnail(documentId, thumbnail, `new-${index}`));
-            const [snapshot, thumbnail] = await Promise.all([assetUpload, thumbnailUpload]);
-            uploaded[index] = {
-                id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                url: await snapshot.ref.getDownloadURL(),
-                path,
-                ...thumbnail,
-                name: file.name,
-                type: video ? "video" : "image",
-                mimeType,
-                duration: video ? entry.duration || 0 : 0
-            };
-            completed += 1;
-            setStatus(`Uploading gallery files… ${completed} of ${queue.length} complete`);
-            await uploadNext();
-        }
-
-        const workerCount = Math.min(4, queue.length);
-        await Promise.all(Array.from({ length: workerCount }, () => uploadNext()));
-        return uploaded;
-    }
-
     auth.onAuthStateChanged(async (user) => {
         if (!user) return returnToLogin();
         try {
@@ -1239,9 +1189,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (oldRecord.highlightPhotoPath && oldRecord.highlightPhotoPath !== uploaded.path) await tools.deleteStoragePath(storage, oldRecord.highlightPhotoPath);
             }
 
-            const uploadedGallery = await uploadGalleryFiles(reference.id);
             const savedGallery = Array.isArray(galleryItems) ? galleryItems : [];
-            const nextGalleryItems = sortGalleryItems(await ensureGalleryThumbnails(reference.id, [...savedGallery, ...uploadedGallery]));
+            const nextGalleryItems = sortGalleryItems(await ensureGalleryThumbnails(reference.id, savedGallery));
 
             const data = {
                 date: dateInput.value,
@@ -1323,21 +1272,6 @@ document.addEventListener("DOMContentLoaded", () => {
         highlightExisting.value = "";
         removeExistingHighlight = true;
         clearPreview();
-    });
-
-    galleryInput.addEventListener("change", async () => {
-        const selected = [...galleryInput.files];
-        galleryInput.value = "";
-        const accepted = selected.filter(file => file.size <= 500 * 1024 * 1024);
-        if (accepted.length !== selected.length) setStatus("Files larger than 500 MB were not added to the gallery.", "error");
-        const next = await Promise.all(accepted.map(async file => ({
-            file,
-            name: file.name,
-            type: isVideoFile(file) ? "video" : "image",
-            duration: isVideoFile(file) ? await getVideoDuration(file) : 0
-        })));
-        pendingGalleryFiles.push(...next);
-        renderGalleryFiles();
     });
 
     addLinkButton.addEventListener("click", () => addExternalLink());

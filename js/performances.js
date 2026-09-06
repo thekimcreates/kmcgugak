@@ -1074,8 +1074,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         window.clearTimeout(closeTimer);
         activeRecord = record;
-        document.getElementById("performance-gallery-upload").href = `upload#${encodeURIComponent(record.id)}`;
-        document.getElementById("performance-gallery-modal-upload").href = `upload#${encodeURIComponent(record.id)}`;
         lastFocusedElement = trigger || document.activeElement;
 
         detailTitle.textContent = getLocation(record);
