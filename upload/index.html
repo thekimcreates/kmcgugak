@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex,nofollow">
+    <script>
+        // Keep a fixed asset base before changing /upload/ to the clean /upload URL.
+        const uploadBase = document.createElement('base');
+        uploadBase.href = new URL(location.pathname.replace(/\/upload(?:\/index\.html)?\/?$/, '/'), location.origin).href;
+        document.head.appendChild(uploadBase);
+        history.replaceState(null, '', location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '') + location.search + location.hash);
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Gallery Upload | KMC Gugak</title>
+
+    <meta
+        name="description"
+        content="Upload photos and videos for a KMC Gugak performance."
+    >
+    <meta name="theme-color" content="#ffffff">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="dns-prefetch" href="//www.gstatic.com">
+    <link rel="dns-prefetch" href="//firestore.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <link rel="stylesheet" href="css/style.css?v=20260830about1">
+    <link rel="stylesheet" href="css/performances.css?v=20260905zoomgate1">
+<link rel="stylesheet" href="css/site-polish.css?v=20260905polish1">
+    <link rel="stylesheet" href="css/gallery-upload.css?v=20260906upload1">
+</head>
+
+<body class="upload-page">
+
+<header class="navbar" id="navbar">
+    <nav class="nav-container" aria-label="Main navigation">
+        <a href="index.html" class="logo" aria-label="KMC Samulnori home">
+            <picture>
+                <source media="(max-width: 600px)" srcset="assets/logo/circle.webp">
+                <img src="assets/logo/full.webp" alt="KMC Samulnori Logo">
+            </picture>
+        </a>
+
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="information.html">About</a></li>
+            <li><a href="performances.html" >Performances</a></li>
+            <li><a href="arrangements.html">Arrangements</a></li>
+            <li><a href="team.html">Team</a></li>
+            <li><a href="admin/login.html">Admin Login</a></li>
+        </ul>
+
+        <button
+            class="menu-toggle"
+            id="menu-toggle"
+            type="button"
+            aria-label="Open navigation menu"
+            aria-expanded="false"
+            aria-controls="mobile-menu"
+        >
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+
+    <div class="mobile-menu" id="mobile-menu">
+        <a href="index.html">Home</a>
+        <a href="information.html">About</a>
+        <a href="performances.html" >Performances</a>
+        <a href="arrangements.html">Arrangements</a>
+        <a href="team.html">Team</a>
+        <a href="admin/login.html">Admin Login</a>
+    </div>
+</header>
+
+<main id="upload-main" class="upload-main">
+    <section id="upload-loading" class="upload-stage" aria-live="polite"><p>Loading performances…</p></section>
+    <section id="upload-picker" class="upload-stage upload-picker" hidden tabindex="-1" aria-labelledby="upload-picker-title">
+        <h1 id="upload-picker-title">Select a performance</h1>
+        <p id="upload-picker-status" role="status"></p>
+        <div id="upload-picker-list" class="upload-picker-list"></div>
+    </section>
+    <section id="upload-gate" class="upload-stage upload-gate" hidden aria-labelledby="upload-gate-title">
+        <div id="upload-card-wrap" class="upload-card-wrap"></div>
+        <div class="upload-code-panel">
+            <h1 id="upload-gate-title">Uploading files for performance</h1>
+            <form id="upload-code-form" novalidate>
+                <div id="upload-code-boxes" class="upload-code-boxes" role="group" aria-label="Four-digit upload code" aria-describedby="upload-code-status">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="one-time-code" aria-label="Code digit 1" aria-describedby="upload-code-status">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="Code digit 2" aria-describedby="upload-code-status">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="Code digit 3" aria-describedby="upload-code-status">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="Code digit 4" aria-describedby="upload-code-status">
+                </div>
+                <p id="upload-code-status" class="upload-code-status" role="status" aria-live="polite">Enter the code provided in the group chat.</p>
+            </form>
+        </div>
+    </section>
+    <section id="upload-workspace" class="upload-stage upload-workspace" hidden aria-labelledby="upload-workspace-title">
+        <h1 id="upload-workspace-title" tabindex="-1"></h1>
+        <div class="upload-work-area">
+            <div class="upload-grid-wrap">
+                <p id="upload-empty" class="upload-empty">Add photos and videos to get started.</p>
+                <div id="upload-grid" class="upload-grid" aria-label="Files selected for uploading"></div>
+            </div>
+            <div class="upload-controls">
+                <div id="upload-drop" class="upload-drop">
+                    <input id="upload-files" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,video/mp4,video/quicktime,video/webm,.mov,.m4v" multiple hidden>
+                    <button id="upload-browse" type="button" class="upload-button">Browse</button>
+                    <p id="upload-drop-help">or drag and drop here</p>
+                    <div id="upload-drop-indicator" class="upload-drop-indicator" hidden role="status" aria-live="polite"></div>
+                </div>
+                <div class="upload-submit-panel">
+                    <div id="upload-progress-wrap" class="upload-progress" hidden>
+                        <progress id="upload-progress" max="100" value="0" aria-label="Overall upload progress"></progress>
+                        <p id="upload-percent" class="upload-percent">0%</p>
+                        <p id="upload-bytes">0 B of 0 B</p>
+                    </div>
+                    <p id="upload-status" class="upload-status" role="status" aria-live="polite"></p>
+                    <button id="upload-submit" type="button" class="upload-button upload-submit" disabled>Submit</button>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+<dialog id="upload-confirm" class="upload-dialog" aria-labelledby="upload-confirm-title" aria-describedby="upload-confirm-message">
+    <h2 id="upload-confirm-title">Are you sure you want to upload these files?</h2>
+    <p id="upload-confirm-message">You will not be able to remove these files after submitting.</p>
+    <div class="upload-dialog-actions">
+        <button id="upload-no" type="button" class="upload-button is-secondary" autofocus>No</button>
+        <button id="upload-yes" type="button" class="upload-button">Yes</button>
+    </div>
+</dialog>
+<footer class="footer">
+    <div class="footer-container">
+        <div class="footer-logo">
+            <img src="assets/logo/full.webp" alt="KMC Samulnori Logo">
+        </div>
+
+        <div class="footer-contact">
+            <p>
+                Contact:
+                <a href="mailto:kmc-samulnori@gmail.com">kmc-samulnori@gmail.com</a>
+            </p>
+        </div>
+
+        <div class="footer-bottom">
+            <p>© 2026 KMC Samulnori. All Rights Reserved.</p>
+        </div>
+    </div>
+</footer>
+<script defer src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+<script defer src="js/config.js?v=20260725p3a"></script>
+<script defer src="js/firebase.js?v=20260725p3a"></script>
+<script defer src="js/main.js?v=20260906upload1"></script>
+<script defer src="js/site-information.js?v=20260725p3a"></script>
+<script defer src="js/performance-list-data.js?v=20260905polish1"></script>
+<script defer src="js/image-optimizer.js?v=20260725p3a"></script>
+<script defer src="js/video-preview.js?v=20260905firstframe2"></script>
+<script defer src="js/gallery-upload-api.js?v=20260906upload1"></script>
+<script defer src="js/gallery-upload.js?v=20260906upload1"></script>
+</body>
+</html>

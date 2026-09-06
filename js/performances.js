@@ -664,7 +664,7 @@ document.addEventListener("DOMContentLoaded", () => {
             message.textContent = "Loading gallery…";
             message.setAttribute("role", "status");
             galleryPreview.replaceChildren(message);
-            window.KMCPerformanceList.detail(record).then(full => {
+            window.KMCPerformanceList.detail(record, { fresh: new URLSearchParams(location.search).has("uploaded") }).then(full => {
                 if (request !== galleryDetailRequest || activeRecord?.id !== record.id || detail.classList.contains("is-closing")) return;
                 activeRecord = full;
                 renderGallery(full);
@@ -682,9 +682,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         galleryShowAll.hidden = false;
         const items = galleryItemsFor(record);
-        gallerySection.hidden = items.length === 0;
+        gallerySection.hidden = false;
+        galleryShowAll.hidden = items.length === 0;
         galleryPreview.replaceChildren();
-        if (!items.length) return;
+        if (!items.length) {
+            const message = document.createElement("p");
+            message.textContent = "No photos or videos have been added yet.";
+            galleryPreview.appendChild(message);
+            return;
+        }
         galleryRecord = record;
         galleryPreview.replaceChildren(...items.slice(0, 16).map((item, index) => {
             const tile = createGalleryTile(item, "performance-gallery-preview-tile", index);
@@ -1090,6 +1096,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         window.clearTimeout(closeTimer);
         activeRecord = record;
+        document.getElementById("performance-gallery-upload").href = `upload#${encodeURIComponent(record.id)}`;
+        document.getElementById("performance-gallery-modal-upload").href = `upload#${encodeURIComponent(record.id)}`;
         lastFocusedElement = trigger || document.activeElement;
 
         detailTitle.textContent = getLocation(record);
@@ -1101,12 +1109,12 @@ document.addEventListener("DOMContentLoaded", () => {
         renderGallery(record);
 
         const links = Array.isArray(record.externalLinks)
-            ? record.externalLinks.filter((link) => link?.url)
+            ? record.externalLinks.filter((link) => typeof link?.url === "string" && link.url.trim())
             : [];
 
         detailLinks.replaceChildren(...links.map(createExternalLink));
         linksEmpty.hidden = links.length !== 0;
-        linksSection.hidden = false;
+        linksSection.hidden = links.length === 0;
 
         if (record.highlightPhotoUrl) {
             detailHero.style.setProperty(
@@ -1120,12 +1128,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         detail.hidden = false;
+        const detailScroll = detail.querySelector(".performance-detail-scroll");
+        if (detailScroll) { detailScroll.style.scrollBehavior = "auto"; detailScroll.scrollTop = 0; }
         detail.setAttribute("aria-hidden", "false");
         document.body.classList.add("performance-detail-open");
 
         requestAnimationFrame(() => {
             detail.classList.remove("is-closing");
             detail.classList.add("is-open");
+            if (detailScroll) { detailScroll.scrollTop = 0; detailScroll.style.scrollBehavior = ""; }
             detailClose.focus({ preventScroll: true });
         });
 

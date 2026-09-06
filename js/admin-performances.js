@@ -122,6 +122,62 @@ document.addEventListener("DOMContentLoaded", () => {
     let galleryItems = [];
     let pendingGalleryFiles = [];
     let galleryPathsToDelete = [];
+    let baseGalleryKeys = new Set();
+    let editingRecord = null;
+    let uploadDraftId = "", uploadCodeRequest = 0, codeBackfillRunning = false;
+    const uploadCodes = new Map();
+    const galleryKey = item => item.path || item.url || item.id;
+
+    async function ensureUploadCode(id, draft = false) {
+        if (uploadCodes.has(id)) return uploadCodes.get(id);
+        const result = await window.KMCGalleryUploadAPI.request("codes", { performanceIds: [id], allowDraft: draft }, { admin: true });
+        const code = result.codes[id];
+        if (!/^\d{4}$/.test(code)) throw new Error("An upload code could not be generated.");
+        uploadCodes.set(id, code);
+        return code;
+    }
+    async function showUploadCode() {
+        const request = ++uploadCodeRequest;
+        const id = idInput.value || uploadDraftId;
+        get("performance-upload-code").textContent = "…";
+        get("performance-upload-code-copy").disabled = true;
+        get("performance-upload-code-retry").hidden = true;
+        get("performance-upload-code-status").textContent = "Loading upload code…";
+        try {
+            const code = await ensureUploadCode(id, !idInput.value);
+            if (request !== uploadCodeRequest) return;
+            get("performance-upload-code").textContent = code;
+            get("performance-upload-code-copy").disabled = false;
+            get("performance-upload-code-status").textContent = "Share this code in the group chat.";
+        } catch (error) {
+            if (request !== uploadCodeRequest) return;
+            get("performance-upload-code").textContent = "—";
+            get("performance-upload-code-status").textContent = error.message;
+            get("performance-upload-code-retry").hidden = false;
+        }
+    }
+    async function backfillUploadCodes() {
+        if (codeBackfillRunning) return;
+        const ids = performanceRecords.map(record => record.id).filter(id => !uploadCodes.has(id));
+        if (!ids.length) return;
+        codeBackfillRunning = true;
+        try {
+            for (let index = 0; index < ids.length; index += 50) {
+                const result = await window.KMCGalleryUploadAPI.request("codes", { performanceIds: ids.slice(index, index + 50) }, { admin: true });
+                Object.entries(result.codes).forEach(([id, code]) => uploadCodes.set(id, code));
+            }
+            get("performance-upload-code-backfill").textContent = "";
+        } catch (error) {
+            get("performance-upload-code-backfill").textContent = `Upload codes: ${error.message}`;
+        } finally { codeBackfillRunning = false; }
+    }
+    get("performance-upload-code-retry").addEventListener("click", showUploadCode);
+    get("performance-upload-code-copy").addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(get("performance-upload-code").textContent);
+            get("performance-upload-code-status").textContent = "Code copied.";
+        } catch (_) { get("performance-upload-code-status").textContent = "Select the code above to copy it."; }
+    });
     const thumbnailRepairAttempted = new Set();
     let thumbnailRepairRunning = false;
 
@@ -813,6 +869,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function resetForm() {
+        uploadCodeRequest++;
+        uploadDraftId = db.collection("performances").doc().id;
+        baseGalleryKeys = new Set();
+        editingRecord = null;
         form.reset();
         idInput.value = "";
         highlightExisting.value = "";
@@ -909,6 +969,7 @@ document.addEventListener("DOMContentLoaded", () => {
         count.textContent = String(performanceRecords.length);
         empty.hidden = performanceRecords.length !== 0;
         performanceRecords.forEach((record) => list.appendChild(createPerformanceCard(record)));
+        backfillUploadCodes();
     }
 
     async function beginEdit(record, trigger) {
@@ -918,6 +979,8 @@ document.addEventListener("DOMContentLoaded", () => {
         finally { if (trigger) { trigger.disabled = false; trigger.textContent = "Edit"; } }
         resetForm();
         idInput.value = record.id;
+        editingRecord = record;
+        showUploadCode();
         dateInput.value = record.date;
         timeInput.value = record.time || "";
         timezoneInput.value = record.timezone || "America/Los_Angeles";
@@ -942,6 +1005,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (record.highlightPhotoUrl) showPreview(record.highlightPhotoUrl);
 
         galleryItems = Array.isArray(record.galleryItems) ? record.galleryItems.map(item => ({ ...item })) : [];
+        baseGalleryKeys = new Set(galleryItems.map(galleryKey));
         pendingGalleryFiles = [];
         galleryPathsToDelete = [];
         galleryInput.value = "";
@@ -1153,8 +1217,9 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const reference = documentId
                 ? db.collection("performances").doc(documentId)
-                : db.collection("performances").doc();
-            const oldRecord = performanceRecords.find((record) => record.id === documentId) || {};
+                : db.collection("performances").doc(uploadDraftId);
+            await ensureUploadCode(reference.id, !documentId);
+            const oldRecord = editingRecord || performanceRecords.find((record) => record.id === documentId) || {};
 
             let highlightPhotoUrl = highlightTbd.checked ? "" : highlightExisting.value;
             let highlightPhotoPath = highlightTbd.checked ? "" : oldRecord.highlightPhotoPath || "";
@@ -1209,7 +1274,15 @@ document.addEventListener("DOMContentLoaded", () => {
             };
 
             if (documentId) {
-                await reference.update(data);
+                // Keep community uploads that arrived while this editor was open.
+                await db.runTransaction(async transaction => {
+                    const current = await transaction.get(reference);
+                    if (!current.exists) throw new Error("This performance was deleted. Refresh to continue.");
+                    const nextKeys = new Set(nextGalleryItems.map(galleryKey));
+                    const newCommunityItems = (current.data().galleryItems || []).filter(item =>
+                        !baseGalleryKeys.has(galleryKey(item)) && !nextKeys.has(galleryKey(item)));
+                    transaction.update(reference, { ...data, galleryItems: sortGalleryItems([...nextGalleryItems, ...newCommunityItems]) });
+                });
             } else {
                 data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
                 await reference.set(data);
@@ -1271,6 +1344,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     addPerformanceButton?.addEventListener("click", () => {
         resetForm();
+        showUploadCode();
         openPerformanceModal(addPerformanceButton);
     });
 
