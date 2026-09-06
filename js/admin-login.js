@@ -17,6 +17,10 @@ document.addEventListener("DOMContentLoaded", () => {
     status.className = "login-status" + (type ? ` is-${type}` : "");
   };
 
+  if (new URLSearchParams(location.search).get("expired") === "1") {
+    message("You have been logged out after 1 hour.");
+  }
+
   const loading = on => {
     submit.disabled = on;
     submit.querySelector("span").textContent = on ? "Verifying…" : "Sign In";

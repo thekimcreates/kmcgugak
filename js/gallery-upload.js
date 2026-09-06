@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const locationLabel = record => record.locationTbd ? "Location TBD" : record.locationName || record.location || "Location unavailable";
     const galleryDateLabel = value => {
         const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
-        return match ? `${match[2]}/${match[3]}/${match[1]}` : "Date unavailable";
+        return match ? `${Number(match[2])}/${match[3]}/${match[1]}` : "Date unavailable";
     };
     const dateLabel = value => window.KMCPerformanceFormat.date(value);
     const timeLabel = record => window.KMCPerformanceFormat.time(record);

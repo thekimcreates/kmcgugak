@@ -141,3 +141,7 @@
     .upload-page .upload-submit.is-complete { background: #167542; color: #fff; }
     .upload-page .upload-dialog::backdrop { background: #0009; }
 }
+
+.upload-page .upload-card-wrap { width: min(100%, 575px); justify-self: center; }
+.upload-page .upload-performance-card.performance-card { height: 360px; min-height: 360px; }
+.upload-picker-main p { font-weight: 650; }

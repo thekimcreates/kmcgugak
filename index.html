@@ -38,10 +38,11 @@
     <link rel="stylesheet" href="css/style.css?v=20260906polish2">
     <link rel="stylesheet" href="css/home-mobile-polish.css?v=20260725p2e">
 
-<link rel="stylesheet" href="css/site-polish.css?v=20260905polish1">
-    <link rel="stylesheet" href="css/home-logo.css?v=20260906dock1">
+<link rel="stylesheet" href="css/site-polish.css?v=20260906ui1">
+    <link rel="stylesheet" href="css/home-logo.css?v=20260906ui1">
     <link rel="preload" as="image" href="assets/logo/kmc-gugak-animated-source.png">
-    <script defer src="js/home-logo.js?v=20260906dock1"></script>
+    <script defer src="js/home-logo.js?v=20260906ui1"></script>
+<script src="js/logo-cache.js?v=20260906ui1"></script>
 </head>
 
 
@@ -61,14 +62,11 @@
     <picture>
 
         <!-- Mobile -->
-        <source 
-            media="(max-width: 600px)"
-            srcset="assets/logo/circle.webp"
-        >
+        
 
         <!-- Desktop -->
         <img 
-            src="assets/logo/full.webp"
+            data-site-logo="full" data-logo-fallback="assets/logo/kmc-gugak-animated-source.png"
             alt="KMC Samulnori Logo"
         >
 
@@ -113,7 +111,7 @@
 
             <li>
                 <a href="admin/login.html">
-                    Admin Login
+                    Login
                 </a>
             </li>
 
@@ -164,7 +162,7 @@
     </a>
 
     <a href="admin/login.html">
-        Admin Login
+        Login
     </a>
 
 </div>
@@ -208,6 +206,7 @@
 
     </div>
 
+    <div class="hero-carousel-controls">
     <button id="hero-previous" class="hero-carousel-arrow hero-carousel-arrow-previous" type="button" aria-label="Show previous hero image">
         <span aria-hidden="true">&#8249;</span>
     </button>
@@ -215,6 +214,7 @@
         <span aria-hidden="true">&#8250;</span>
     </button>
     <div id="hero-carousel-dots" class="hero-carousel-dots" aria-hidden="true"></div>
+    </div>
 
 
     <!-- Hero Overlay -->
@@ -247,7 +247,7 @@
     <canvas id="home-logo-canvas" width="1280" height="480"></canvas>
 </div>
 
-<a class="home-hero-scroll" href="#home-sections-root" aria-label="Scroll to homepage sections"><span></span></a>
+<a class="home-hero-scroll" href="#performances" aria-label="Scroll to performances"><span></span></a>
 </section>
 
 
@@ -505,7 +505,7 @@
 
 
             <img
-                src="assets/logo/full.webp"
+                data-site-logo="full" data-logo-fallback="assets/logo/kmc-gugak-animated-source.png"
                 alt="KMC Samulnori Logo"
             >
 
@@ -563,7 +563,7 @@
 
 <script defer src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
-<script defer src="js/public.bundle.js?v=20260725p3e"></script><script defer src="js/site-information.js?v=20260829info2"></script>
+<script defer src="js/public.bundle.js?v=20260725p3e"></script><script defer src="js/site-information.js?v=20260906ui1"></script>
 <script defer src="js/arrangements-data.js?v=20260725p2e"></script>
 
 

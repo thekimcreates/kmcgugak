@@ -70,6 +70,7 @@
 
   function apply(data) {
     const info = normalize(data);
+    window.KMCLogoCache?.save(info.fullLogoUrl);
     if (info.fullLogoUrl) {
       document.querySelectorAll('img[src$="assets/logo/full.webp"], img[data-site-logo="full"]').forEach(img => {
         img.dataset.siteLogo = "full";

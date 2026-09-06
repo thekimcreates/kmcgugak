@@ -43,3 +43,8 @@
     .home-logo-intro #navbar .home-header-logo .home-header-logo-fallback { visibility: visible; }
     .hero-logo-stage, .home-logo-flight { display: none !important; }
 }
+
+/* Keep the complete logo in the mobile header and flight destination. */
+@media (max-width: 600px) {
+    #navbar .home-header-logo { width: 112px; height: 42px; }
+}

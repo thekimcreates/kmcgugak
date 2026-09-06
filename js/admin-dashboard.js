@@ -117,7 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (error?.code === "permission-denied") {
                 message.textContent = "Recent Activity is blocked by Firestore permissions. Publish the corrected rules file, then refresh this page.";
             } else if (error?.code === "unauthenticated") {
-                message.textContent = "Your administrator session expired. Sign out and sign in again.";
+                message.textContent = "You have been logged out after 1 hour.";
             } else {
                 message.textContent = `Recent Activity could not be loaded${error?.code ? ` (${error.code})` : ""}. Check the browser console for details.`;
             }

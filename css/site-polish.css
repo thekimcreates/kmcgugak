@@ -80,3 +80,32 @@ html, body { background: var(--page-solid) !important; }
 .admin-header-toggle span:last-child { transform: translateY(4px); }
 .is-menu-open .admin-header-toggle span:first-child { transform: rotate(45deg); }
 .is-menu-open .admin-header-toggle span:last-child { transform: rotate(-45deg); }
+
+/* Consistent full branding and stationary admin header presentation. */
+.logo img, #navbar .home-header-logo img { width: 112px; height: 42px; object-fit: contain; }
+.logo picture, #navbar .home-header-logo { width: 112px; height: 42px; }
+.admin-brand img { width: 112px; height: 42px; object-fit: contain; }
+.admin-site-header,
+.admin-motion-ready .admin-site-header[data-admin-reveal],
+.admin-motion-ready .admin-site-header[data-admin-reveal].admin-reveal-visible {
+    opacity: 1; transform: none; animation: none; transition: none;
+}
+#hero .hero-carousel-controls { position: absolute; top: 116px; bottom: auto; left: 50%; transform: translateX(-50%); }
+#hero .hero-carousel-controls .hero-carousel-arrow,
+#hero .hero-carousel-controls .hero-carousel-dots { position: static; inset: auto; transform: none; }
+#performances { scroll-margin-top: 120px; }
+.performance-admin-date { text-transform: none; color: var(--admin-muted, #6e6e73); }
+.performance-preview-panel { padding: 20px; }
+.admin-dashboard-card-link { background: #f5f5f7; box-shadow: 0 8px 28px rgba(0,0,0,.10); border: 1px solid rgba(0,0,0,.08); }
+@media (prefers-color-scheme: dark) {
+    .home-section-admin-card, .home-section-drag-preview { background: #1c1c1e; color: #f5f5f7; border-color: #38383d; }
+    .home-section-drag-handle span { background: #c4c4ca; }
+    .home-section-drag-handle:hover, .home-section-drag-handle:focus-visible { background: #38383d; }
+    .admin-dashboard-card-link { background: #1c1c1e; border-color: #38383d; box-shadow: 0 8px 28px rgba(0,0,0,.35); }
+}
+.admin-motion-ready .admin-site-header,
+.admin-motion-ready .admin-site-header.admin-header-visible { opacity: 1; transform: none; transition: none; animation: none; }
+#hero .hero-carousel-arrow-previous { order: 0; }
+#hero .hero-carousel-dots { order: 1; }
+#hero .hero-carousel-arrow-next { order: 2; }
+@media (max-width: 900px) { #hero .hero-carousel-controls { top: 94px; } }

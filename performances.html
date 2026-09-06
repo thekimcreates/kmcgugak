@@ -25,8 +25,9 @@
 
     <link rel="stylesheet" href="css/style.css?v=20260906polish2">
     <link rel="stylesheet" href="css/performances.css?v=20260906polish2">
-<link rel="stylesheet" href="css/site-polish.css?v=20260905polish1">
-    <link rel="stylesheet" href="css/gallery-upload.css?v=20260906polish2">
+<link rel="stylesheet" href="css/site-polish.css?v=20260906ui1">
+    <link rel="stylesheet" href="css/gallery-upload.css?v=20260906ui1">
+<script src="js/logo-cache.js?v=20260906ui1"></script>
 </head>
 
 <body class="performances-page">
@@ -35,8 +36,8 @@
     <nav class="nav-container" aria-label="Main navigation">
         <a href="index.html" class="logo" aria-label="KMC Samulnori home">
             <picture>
-                <source media="(max-width: 600px)" srcset="assets/logo/circle.webp">
-                <img src="assets/logo/full.webp" alt="KMC Samulnori Logo">
+                
+                <img data-site-logo="full" data-logo-fallback="assets/logo/kmc-gugak-animated-source.png" alt="KMC Samulnori Logo">
             </picture>
         </a>
 
@@ -46,7 +47,7 @@
             <li><a href="performances.html" class="active" aria-current="page">Performances</a></li>
             <li><a href="arrangements.html">Arrangements</a></li>
             <li><a href="team.html">Team</a></li>
-            <li><a href="admin/login.html">Admin Login</a></li>
+            <li><a href="admin/login.html">Login</a></li>
         </ul>
 
         <button
@@ -68,7 +69,7 @@
         <a href="performances.html" class="active" aria-current="page">Performances</a>
         <a href="arrangements.html">Arrangements</a>
         <a href="team.html">Team</a>
-        <a href="admin/login.html">Admin Login</a>
+        <a href="admin/login.html">Login</a>
     </div>
 </header>
 
@@ -272,7 +273,7 @@
 <footer class="footer">
     <div class="footer-container">
         <div class="footer-logo">
-            <img src="assets/logo/full.webp" alt="KMC Samulnori Logo">
+            <img data-site-logo="full" data-logo-fallback="assets/logo/kmc-gugak-animated-source.png" alt="KMC Samulnori Logo">
         </div>
 
         <div class="footer-contact">
@@ -291,7 +292,7 @@
 <script defer src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/12.16.0/firebase-storage-compat.js"></script>
-<script defer src="js/public.bundle.js?v=20260725p3e"></script><script defer src="js/site-information.js?v=20260725p3a"></script>
+<script defer src="js/public.bundle.js?v=20260725p3e"></script><script defer src="js/site-information.js?v=20260906ui1"></script>
 
 
 

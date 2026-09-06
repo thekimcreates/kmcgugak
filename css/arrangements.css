@@ -793,3 +793,10 @@ body.arrangement-open .navbar {
         bottom: 20px;
     }
 }
+
+/* Match the public performance grid dimensions. */
+.arrangements-page .arrangements-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px; }
+.arrangements-page .arrangement-page-card { min-height: 360px; height: 360px; border-radius: var(--radius); }
+@media (max-width: 900px) {
+    .arrangements-page .arrangements-list { grid-template-columns: 1fr; gap: 25px; }
+}

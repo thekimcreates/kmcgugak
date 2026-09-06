@@ -107,9 +107,9 @@ function createLogoMotion(ctx, logo, makeCanvas) {
     let waitingForSections = false;
     let pendingScrollTimer = 0;
     function scrollToSections() {
-        const sections = document.getElementById('home-sections-root');
+        const sections = document.getElementById('performances');
         if (!sections) return;
-        const target = sections.firstElementChild || sections;
+        const target = sections;
         const headerBottom = document.getElementById('navbar')?.getBoundingClientRect().bottom || 100;
         const top = Math.max(0, window.scrollY + target.getBoundingClientRect().top - headerBottom - 20);
         window.scrollTo({ top, behavior: preference.matches ? 'instant' : 'smooth' });
@@ -129,8 +129,9 @@ function createLogoMotion(ctx, logo, makeCanvas) {
         if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
         event.stopPropagation();
+        history.replaceState(null, "", "#performances");
         scrollToSections();
-        if (!document.getElementById('home-sections-root')?.firstElementChild) {
+        if (!document.getElementById('performances')) {
             waitingForSections = true;
             window.clearTimeout(pendingScrollTimer);
             pendingScrollTimer = window.setTimeout(stopWaitingForSections, 10000);
@@ -156,7 +157,7 @@ function createLogoMotion(ctx, logo, makeCanvas) {
             headerFallback.setAttribute('aria-hidden', 'true');
             headerLogo.appendChild(headerFallback);
         }
-        const isMobile = mobile.matches;
+        const isMobile = false;
         headerFallback.width = isMobile ? 386 : 1044;
         const c = headerFallback.getContext('2d');
         if (!c) { headerFallback.hidden = true; return; }
@@ -205,7 +206,7 @@ function createLogoMotion(ctx, logo, makeCanvas) {
         // Measure each frame so scrolling, resizing and orientation changes stay aligned.
         const from = stage.getBoundingClientRect();
         const box = headerLogo.getBoundingClientRect();
-        const isMobile = mobile.matches;
+        const isMobile = false;
         const art = isMobile
             ? { x: 53.84, y: 21.04, w: 432.32, h: 437.92 }
             : { x: 53.84, y: 21.04, w: 1169.28, h: 437.92 };
