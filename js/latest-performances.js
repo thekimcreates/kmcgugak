@@ -46,7 +46,7 @@
         const locationText = performance.locationTbd ? "Location TBD" : performance.locationName || performance.location || "Location unavailable";
         const link = document.createElement("a");
         link.className = "performance-card-link";
-        link.href = `performances.html#${encodeURIComponent(record.id)}`;
+        link.href = `/performances/#${encodeURIComponent(record.id)}`;
         link.setAttribute("aria-label", `View the ${formatDate(performance.date)} performance at ${locationText}`);
         const content = document.createElement("div");
         content.className = "performance-card-content";

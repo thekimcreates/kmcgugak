@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base href="/">
+    <link rel="icon" type="image/png" href="/assets/logo/kmcoc-circlelogo.png">
+    <link rel="apple-touch-icon" href="/assets/logo/kmcoc-circlelogo.png">
+    <link rel="canonical" href="https://kmcoc.org/admin/home/">
+    <script>if (/\/index\.html$/.test(location.pathname)) history.replaceState(null, "", location.pathname.replace(/index\.html$/, "") + location.search + location.hash);</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manage Home Page | KMC Gugak</title>
+    <link rel="stylesheet" href="../css/admin.css?v=20260830about1">
+    <link rel="stylesheet" href="../css/admin-mobile-polish.css?v=20260725p3a">
+<link rel="stylesheet" href="../css/site-polish.css?v=20260906ui1">
+<script src="../js/logo-cache.js?v=20260906ui1"></script>
+</head>
+<body data-admin-page="home-sections">
+<div class="admin-shell">
+    <header class="admin-topbar admin-site-header">
+        <a class="admin-brand" href="/" aria-label="KMC Samulnori home">
+            <img data-site-logo="full" data-logo-fallback="../assets/logo/kmc-gugak-animated-source.png" alt="KMC Samulnori">
+        </a>
+        <nav class="admin-nav" aria-label="Admin navigation">
+            <a href="/admin/dashboard/" data-admin-page="dashboard">Dashboard</a>
+            <a href="/admin/home/" data-admin-page="home-sections">Home Page</a>
+            <a href="/admin/performances/" data-admin-page="performances">Performances</a>
+            <a href="/admin/arrangements/" data-admin-page="arrangements">Arrangements</a>
+            <a href="/admin/team/" data-admin-page="team">Team</a><a href="/admin/about/" data-admin-page="about">About</a>
+        </nav>
+    </header>
+
+    <div id="home-sections-loading" class="dashboard-loading">Verifying administrator access…</div>
+
+    <main id="home-sections-admin" class="admin-dashboard-main" hidden>
+        <div class="admin-dashboard-header performance-page-header">
+            <div>
+                <h1>Home Page</h1>
+                
+            </div>
+            <div class="admin-user-meta">
+                <span id="admin-user-email"></span>
+                <button id="admin-logout" class="admin-logout" type="button">Sign Out</button>
+            </div>
+        </div>
+
+
+        <section class="admin-panel home-hero-admin-panel">
+            <div class="admin-panel-heading">
+                <div>
+                    <h2>Hero Images</h2>
+                    
+                </div>
+                <label class="admin-submit home-hero-upload-label" for="home-hero-upload">Add Hero Images</label>
+                <input id="home-hero-upload" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+            </div>
+            <div id="home-hero-upload-progress" class="home-hero-upload-progress" hidden>
+                <span id="home-hero-upload-progress-text">Preparing images…</span>
+            </div>
+            <div id="home-hero-admin-list" class="home-hero-admin-list" aria-live="polite"></div>
+            <p id="home-hero-status" class="login-status" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="admin-panel">
+            <div class="admin-panel-heading">
+                <div>
+                    <h2>Sections</h2>
+                </div>
+                <button id="add-text-section" class="admin-submit" type="button">Add Header and Text</button>
+            </div>
+
+            
+            <div id="home-section-list" class="home-section-admin-list" aria-live="polite"></div>
+            <p id="home-section-status" class="login-status" role="status" aria-live="polite"></p>
+        </section>
+    </main>
+
+    <footer class="admin-public-footer">
+        <div class="admin-footer-container">
+            <div class="admin-footer-logo"><img data-site-logo="full" data-logo-fallback="../assets/logo/kmc-gugak-animated-source.png" alt="KMC Samulnori Logo"></div>
+            <div class="admin-footer-contact"><p>Contact: <a href="mailto:kmc-samulnori@gmail.com">kmc-samulnori@gmail.com</a></p></div>
+            <div class="admin-footer-bottom"><p>© 2026 KMC Samulnori. All Rights Reserved.</p></div>
+        </div>
+    </footer>
+</div>
+
+<div id="home-section-editor-modal" class="performance-modal" hidden aria-hidden="true">
+    <div class="performance-modal-backdrop"></div>
+    <section class="performance-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="home-section-editor-title">
+        <button class="performance-modal-close" data-close-home-section-modal type="button" aria-label="Close editor">&times;</button>
+        <div class="performance-modal-body">
+            <section class="admin-panel">
+                <div class="admin-panel-heading">
+                    <div>
+                        
+                        <h2 id="home-section-editor-title">Add Header and Text</h2>
+                    </div>
+                </div>
+                <form id="home-section-form" class="admin-form">
+                    <input id="home-section-id" type="hidden">
+                    <div class="admin-field">
+                        <label for="home-section-heading">Header</label>
+                        <input id="home-section-heading" maxlength="120" required>
+                    </div>
+                    <div class="admin-field">
+                        <label>Text</label>
+                        <div id="home-section-body-editor"></div>
+                    </div>
+                    <p id="home-section-form-status" class="login-status" role="status" aria-live="polite"></p>
+                    <button class="admin-submit" type="submit">Save Section</button>
+                </form>
+            </section>
+        </div>
+    </section>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-storage-compat.js"></script>
+<script src="../js/config.js?v=20260725p3a"></script><script src="../js/firebase.js?v=20260725p3a"></script><script src="../js/admin-session.js?v=20260905polish1"></script><script src="../js/site-information.js?v=20260906ui1"></script><script src="../js/admin-tools.js?v=20260905polish1"></script><script src="../js/admin-motion.js?v=20260725p3a"></script>
+
+
+<script src="../js/image-optimizer.js?v=20260725p3a"></script>
+<script src="../js/admin-home.js?v=20260725p3a"></script>
+<script src="../js/admin-home-hero.js?v=20260725p3a"></script>
+
+<script src="../js/admin-header.js?v=20260905polish1"></script></body>
+</html>

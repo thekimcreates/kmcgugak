@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base href="/">
+    <link rel="icon" type="image/png" href="/assets/logo/kmcoc-circlelogo.png">
+    <link rel="apple-touch-icon" href="/assets/logo/kmcoc-circlelogo.png">
+    <link rel="canonical" href="https://kmcoc.org/admin/performances/">
+    <script>if (/\/index\.html$/.test(location.pathname)) history.replaceState(null, "", location.pathname.replace(/index\.html$/, "") + location.search + location.hash);</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manage Performances | KMC Gugak</title>
+    <link rel="stylesheet" href="../css/admin.css?v=20260905galleryzip1">
+    <link rel="stylesheet" href="../css/admin-mobile-polish.css?v=20260725p3a">
+<link rel="stylesheet" href="../css/site-polish.css?v=20260906ui1">
+<link rel="stylesheet" href="../css/gallery-upload.css?v=20260906ui1">
+<script src="../js/logo-cache.js?v=20260906ui1"></script>
+</head>
+<body data-admin-page="performances">
+    <div class="admin-shell">
+        <header class="admin-topbar admin-site-header">
+            <a class="admin-brand" href="/" aria-label="KMC Samulnori home">
+                <img data-site-logo="full" data-logo-fallback="../assets/logo/kmc-gugak-animated-source.png" alt="KMC Samulnori">
+            </a>
+            <nav class="admin-nav" aria-label="Admin navigation">
+                <a href="/admin/dashboard/" data-admin-page="dashboard">Dashboard</a><a href="/admin/home/" data-admin-page="home-sections">Home Page</a>
+                <a href="/admin/performances/" data-admin-page="performances">Performances</a>
+                <a href="/admin/arrangements/" data-admin-page="arrangements">Arrangements</a>
+                <a href="/admin/team/" data-admin-page="team">Team</a><a href="/admin/about/" data-admin-page="about">About</a>
+            </nav>
+        </header>
+
+        <div id="performances-loading" class="dashboard-loading">Verifying administrator access…</div>
+
+        <main id="performances-admin" class="admin-dashboard-main" hidden>
+            <div class="admin-dashboard-header performance-page-header">
+                <div>
+                    
+                    <h1>Performances</h1>
+                    
+                </div>
+                <div class="admin-user-meta">
+                    <span id="admin-user-email"></span>
+                    <button id="admin-logout" class="admin-logout" type="button">Sign Out</button>
+                </div>
+            </div>
+
+            <div class="performance-manager-layout">
+                <div id="performance-modal" class="performance-modal" hidden aria-hidden="true">
+                    <div class="performance-modal-backdrop" aria-hidden="true"></div>
+                    <section class="performance-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="performance-form-title">
+                        <button id="performance-modal-close" class="performance-modal-close" type="button" aria-label="Close performance editor">&times;</button>
+                        <div class="performance-modal-body">
+                            <section class="admin-panel performance-form-panel">
+                    <div class="admin-panel-heading">
+                        <div>
+                            
+                            <h2 id="performance-form-title">Add Performance</h2>
+                        </div>
+                    </div>
+
+                    <form id="performance-form" class="admin-form">
+                        <input id="performance-id" type="hidden">
+                        <input id="performance-highlight-existing" type="hidden">
+                        <input id="performance-location-name" type="hidden">
+                        <input id="performance-location-address" type="hidden">
+                        <input id="performance-location-place-id" type="hidden">
+                        <input id="performance-location-lat" type="hidden">
+                        <input id="performance-location-lng" type="hidden">
+
+                        <div class="admin-field">
+                            <label for="performance-date">Date</label>
+                            <div class="admin-input-wrap">
+                                <input id="performance-date" type="date" required>
+                            </div>
+                        </div>
+
+                        <fieldset class="admin-subsection">
+                            <legend>Time</legend>
+                            <label class="admin-toggle-row">
+                                <input id="performance-time-tbd" type="checkbox">
+                                <span>Time is TBD</span>
+                            </label>
+                            <div class="admin-split-fields">
+                                <div class="admin-field">
+                                    <label for="performance-time">Time</label>
+                                    <input id="performance-time" type="time">
+                                </div>
+                                <div class="admin-field">
+                                    <label for="performance-timezone">Time zone</label>
+                                    <select id="performance-timezone">
+                                        <option value="America/Los_Angeles">Pacific Time</option>
+                                        <option value="America/Denver">Mountain Time</option>
+                                        <option value="America/Chicago">Central Time</option>
+                                        <option value="America/New_York">Eastern Time</option>
+                                        <option value="America/Anchorage">Alaska Time</option>
+                                        <option value="Pacific/Honolulu">Hawaii Time</option>
+                                        <option value="Asia/Seoul">Korea Standard Time</option>
+                                        <option value="UTC">UTC</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <fieldset class="admin-subsection">
+                            <legend>Location</legend>
+                            <label class="admin-toggle-row">
+                                <input id="performance-location-tbd" type="checkbox">
+                                <span>Location is TBD</span>
+                            </label>
+                            <div id="performance-location-fields">
+                                <div class="admin-field">
+                                    <label for="performance-location">Search Google Maps</label>
+                                    <input id="performance-location" type="text" maxlength="180" placeholder="Search for a venue or address" autocomplete="off">
+                                    <p class="admin-help-text">Choose a Google Maps suggestion so the address and map are saved correctly.</p>
+                                </div>
+                                <div id="performance-location-map" class="performance-location-map" aria-label="Selected location map"></div>
+                            </div>
+                        </fieldset>
+
+                        <fieldset class="admin-subsection">
+                            <legend>Arrangements</legend>
+                            <label class="admin-toggle-row">
+                                <input id="performance-arrangements-tbd" type="checkbox">
+                                <span>Arrangements are TBD</span>
+                            </label>
+                            <div id="performance-arrangement-fields">
+                                <div id="performance-arrangements-list" class="arrangement-options">
+                                    <p class="admin-help-text">Loading arrangements…</p>
+                                </div>
+                                <p class="admin-help-text">To add custom arrangements, go to the <a href="/admin/arrangements/">Admin Arrangements page</a> and make them there.</p>
+                            </div>
+                        </fieldset>
+
+                        <fieldset class="admin-subsection">
+                            <legend>Members</legend>
+                            <label class="admin-toggle-row">
+                                <input id="performance-members-tbd" type="checkbox">
+                                <span>Attending members are TBD</span>
+                            </label>
+                            <div id="performance-member-fields">
+                                <div id="performance-members-list" class="member-options">
+                                    <p class="admin-help-text">Loading members…</p>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <fieldset class="admin-subsection">
+                            <legend>Highlight photo</legend>
+                            <label class="admin-toggle-row">
+                                <input id="performance-highlight-tbd" type="checkbox">
+                                <span>Highlight photo is TBD</span>
+                            </label>
+                            <div id="performance-highlight-fields">
+                                <div class="admin-field">
+                                    <label for="performance-highlight">Upload one image</label>
+                                    <input id="performance-highlight" type="file" accept="image/jpeg,image/png,image/webp">
+                                    <p class="admin-help-text">Recommended: landscape image, at least 1600 × 900. Maximum 10 MB.</p>
+                                </div>
+                                <div id="performance-highlight-preview-wrap" class="highlight-preview-wrap" hidden>
+                                    <img id="performance-highlight-preview" alt="Highlight preview" decoding="async">
+                                    <button id="performance-highlight-remove" class="admin-secondary-button admin-small-button" type="button">Remove photo</button>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <fieldset class="admin-subsection performance-gallery-admin-section">
+                            <legend>Gallery</legend>
+                            <div class="admin-field">
+                                <a id="performance-gallery-upload-link" class="gallery-upload-button" target="_blank" rel="noopener" aria-disabled="true" tabindex="-1">Upload Files</a>
+                                <p id="performance-gallery-upload-help" class="admin-help-text">Save this performance first to upload files.</p>
+                            </div>
+                            <button id="performance-gallery-download" class="admin-secondary-button" type="button" hidden>Download all as ZIP</button>
+                            <p id="performance-gallery-summary" class="performance-gallery-admin-summary">No gallery items selected.</p>
+                            <ul id="performance-gallery-list" class="performance-gallery-admin-list" aria-live="polite"></ul>
+                        </fieldset>
+
+                        <fieldset class="admin-subsection">
+                            <legend>Code for Uploading</legend>
+                            <div class="admin-upload-code">
+                                <output id="performance-upload-code" aria-label="Upload code">…</output>
+                                <button id="performance-upload-code-copy" class="admin-secondary-button admin-small-button" type="button" disabled>Copy Code</button>
+                                <button id="performance-upload-code-retry" class="admin-secondary-button admin-small-button" type="button" hidden>Try again</button>
+                            </div>
+                            <p id="performance-upload-code-status" class="admin-help-text" role="status" aria-live="polite">Share this code in the group chat.</p>
+                        </fieldset>
+
+                        <fieldset class="admin-subsection">
+                            <legend>External links</legend>
+                            <label class="admin-toggle-row">
+                                <input id="performance-links-tbd" type="checkbox">
+                                <span>External links are TBD</span>
+                            </label>
+                            <div id="performance-links-fields">
+                                <div id="performance-links-list" class="external-links-list"></div>
+                                <button id="performance-link-add" class="admin-secondary-button" type="button">+ Add Link</button>
+                                <p class="admin-help-text">Examples: Google Photos album, YouTube playlist, event page, or news article.</p>
+                            </div>
+                        </fieldset>
+
+                        <div class="performance-form-actions">
+                            <div class="performance-save-group">
+                                <button id="performance-submit" class="admin-submit" type="submit">Add Performance</button>
+                                <p id="performance-status" class="login-status" role="status" aria-live="polite"></p>
+                            </div>
+                            <button id="performance-cancel" class="admin-secondary-button" type="button" hidden>Cancel Edit</button>
+                        </div>
+                    </form>
+                </section>
+                        </div>
+                    </section>
+                </div>
+
+                <section class="admin-panel performance-list-panel">
+                    <div class="admin-panel-heading performance-list-heading">
+                        <h2>All Performances</h2>
+                        <div class="performance-list-actions">
+                            <button id="performance-add-button" class="admin-submit admin-small-button" type="button">+ Add Performance</button>
+                            <span id="performance-count" class="admin-count-badge" aria-label="Total performances">0</span>
+                        </div>
+                    </div>
+
+                    <div class="admin-subsection performance-preview-panel">
+                        <button id="performance-preview-retry" class="admin-secondary-button" type="button">Check and repair gallery previews</button>
+                        <p id="performance-preview-report" class="admin-help-text" role="status" aria-live="polite"></p>
+                        <ul id="performance-preview-errors" class="admin-help-text"></ul>
+                    </div>
+                    <p id="performance-upload-code-backfill" class="admin-help-text" role="status" aria-live="polite"></p>
+                    <div id="performance-list" class="performance-admin-list"></div>
+                    <p id="performance-empty" class="admin-empty-state" hidden>No performances have been added yet.</p>
+                </section>
+            </div>
+        </main>
+
+        <footer class="admin-public-footer">
+            <div class="admin-footer-container">
+                <div class="admin-footer-logo">
+                    <img data-site-logo="full" data-logo-fallback="../assets/logo/kmc-gugak-animated-source.png" alt="KMC Samulnori Logo">
+                </div>
+                <div class="admin-footer-contact">
+                    <p>Contact: <a href="mailto:kmc-samulnori@gmail.com">kmc-samulnori@gmail.com</a></p>
+                </div>
+                <div class="admin-footer-bottom">
+                    <p>© 2026 KMC Samulnori. All Rights Reserved.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <dialog id="gallery-zip-dialog" class="gallery-zip-dialog" aria-labelledby="gallery-zip-title" aria-describedby="gallery-zip-description">
+        <h2 id="gallery-zip-title">Download gallery</h2>
+        <p id="gallery-zip-description"></p>
+        <div id="gallery-zip-progress-wrap" hidden>
+            <div class="gallery-zip-progress-label"><span id="gallery-zip-phase">Preparing files…</span><span id="gallery-zip-percent">0%</span></div>
+            <progress id="gallery-zip-progress" max="100" value="0" aria-label="Gallery ZIP progress"></progress>
+            <p id="gallery-zip-count" aria-live="polite" aria-atomic="true">0 of 0</p>
+        </div>
+        <p id="gallery-zip-status" role="status" aria-live="polite"></p>
+        <div class="gallery-zip-actions">
+            <button id="gallery-zip-no" class="admin-secondary-button" type="button">No</button>
+            <button id="gallery-zip-yes" class="admin-submit" type="button">Yes</button>
+            <a id="gallery-zip-download" class="admin-submit" hidden>Download ZIP</a>
+        </div>
+    </dialog>
+
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-storage-compat.js"></script>
+    <script src="../js/config.js?v=20260725p3a"></script><script src="../js/firebase.js?v=20260725p3a"></script><script src="../js/admin-session.js?v=20260905polish1"></script><script src="../js/site-information.js?v=20260906ui1"></script><script src="../js/admin-tools.js?v=20260905polish1"></script><script src="../js/admin-motion.js?v=20260725p3a"></script>
+    
+    <script src="../js/image-optimizer.js?v=20260725p3a"></script><script src="../js/video-preview.js?v=20260905firstframe2"></script>
+    <script src="../js/vendor/jszip.min.js?v=3.10.1"></script>
+    <script src="../js/gallery-zip.js?v=20260905galleryzip1"></script>
+    <script src="../js/performance-list-data.js?v=20260905polish1"></script><script src="../js/gallery-upload-api.js?v=20260906upload1"></script><script src="../js/admin-performances.js?v=20260906uploadlinks"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD-MVpD9Qvsag1sJKHblNsBdQXZDXPTbMI&libraries=places&callback=initializeKmcPerformanceMap"></script>
+    
+<script src="../js/admin-header.js?v=20260905polish1"></script></body>
+</html>

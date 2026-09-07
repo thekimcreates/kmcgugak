@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base href="/">
+    <link rel="icon" type="image/png" href="/assets/logo/kmcoc-circlelogo.png">
+    <link rel="apple-touch-icon" href="/assets/logo/kmcoc-circlelogo.png">
+    <link rel="canonical" href="https://kmcoc.org/admin/team/">
+    <script>if (/\/index\.html$/.test(location.pathname)) history.replaceState(null, "", location.pathname.replace(/index\.html$/, "") + location.search + location.hash);</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manage Team | KMC Gugak</title>
+    <link rel="stylesheet" href="../css/admin.css?v=20260830about1">
+    <link rel="stylesheet" href="../css/admin-mobile-polish.css?v=20260725p3a">
+<link rel="stylesheet" href="../css/site-polish.css?v=20260906ui1">
+<script src="../js/logo-cache.js?v=20260906ui1"></script>
+</head>
+<body data-admin-page="team">
+<div class="admin-shell">
+    <header class="admin-topbar admin-site-header">
+        <a class="admin-brand" href="/" aria-label="KMC Samulnori home">
+            <img data-site-logo="full" data-logo-fallback="../assets/logo/kmc-gugak-animated-source.png" alt="KMC Samulnori">
+        </a>
+        <nav class="admin-nav" aria-label="Admin navigation">
+            <a href="/admin/dashboard/" data-admin-page="dashboard">Dashboard</a><a href="/admin/home/" data-admin-page="home-sections">Home Page</a>
+            <a href="/admin/performances/" data-admin-page="performances">Performances</a>
+                <a href="/admin/arrangements/" data-admin-page="arrangements">Arrangements</a>
+            <a href="/admin/team/" data-admin-page="team">Team</a><a href="/admin/about/" data-admin-page="about">About</a>
+        </nav>
+    </header>
+
+    <div id="team-loading" class="dashboard-loading">Verifying administrator access…</div>
+
+    <main id="team-admin" class="admin-dashboard-main" hidden>
+        <div class="admin-dashboard-header">
+            <div><h1>Team</h1></div>
+            <div class="admin-user-meta">
+                <span id="admin-user-email"></span>
+                <button id="admin-logout" class="admin-logout" type="button">Sign Out</button>
+            </div>
+        </div>
+
+        <form id="team-form" class="team-admin-form">
+            <section class="admin-panel team-editor-panel">
+                <div class="admin-panel-heading"><div><h2>Hero Image</h2></div></div>
+                <div class="team-image-editor"><img id="team-hero-preview" src="../assets/team/team-hero.webp" alt="Team hero image preview"><div class="team-image-editor-actions"><label class="admin-submit" for="team-hero-input">Choose Image</label><input id="team-hero-input" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp"><p id="team-hero-note" class="admin-help-text"></p></div></div>
+            </section>
+
+            <section class="admin-panel team-editor-panel">
+                <div class="admin-panel-heading">
+                    <div>
+                        <h2>Teacher</h2>
+                    </div>
+                </div>
+
+                <div class="team-image-editor team-teacher-image-editor"><img id="teacher-image-preview" src="../assets/team/instructor.webp" alt="Teacher image preview"><div class="team-image-editor-actions"><label class="admin-submit" for="teacher-image-input">Choose Image</label><input id="teacher-image-input" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp"><p id="teacher-image-note" class="admin-help-text"></p></div></div>
+
+                <div class="team-editor-grid">
+                    <div class="admin-field">
+                        <label for="instructor-name">English Name</label>
+                        <input id="instructor-name" name="instructorName" type="text" required>
+                    </div>
+                    <div class="admin-field">
+                        <label for="instructor-korean-name">Korean Name</label>
+                        <input id="instructor-korean-name" name="instructorKoreanName" type="text">
+                    </div>
+                </div>
+
+                <div class="team-teacher-message-grid">
+                    <div class="admin-field">
+                        <label for="teacher-message-ko">Teacher’s message (Korean)</label>
+                        <div id="teacher-message-ko" data-rich-editor aria-label="Teacher’s message in Korean"></div>
+                    </div>
+
+                    <div class="admin-field">
+                        <label for="teacher-message-en">Teacher’s message (English)</label>
+                        <div id="teacher-message-en" data-rich-editor aria-label="Teacher’s message in English"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="admin-panel team-editor-panel">
+                <div class="admin-panel-heading team-members-heading">
+                    <div>
+                        <h2>Members</h2>
+                    </div>
+                    <button id="add-member" class="admin-secondary-button" type="button">Add Member</button>
+                </div>
+
+                <div id="member-editor-list" class="member-editor-list"></div>
+            </section>
+
+            <div class="team-save-bar" aria-hidden="true" inert>
+                <div class="team-save-notice"><p id="team-save-message">Your changes are not saved. Press the button to save changes.</p></div>
+                <p id="team-status" class="login-status" role="status" aria-live="polite"></p>
+                <button id="revert-team" class="team-revert-button" type="button">Revert Changes</button>
+                <button id="save-team" class="admin-submit" type="submit">Save Changes</button>
+            </div>
+        </form>
+    </main>
+
+    <footer class="admin-public-footer">
+        <div class="admin-footer-container">
+            <div class="admin-footer-logo"><img data-site-logo="full" data-logo-fallback="../assets/logo/kmc-gugak-animated-source.png" alt="KMC Samulnori Logo"></div>
+            <div class="admin-footer-contact"><p>Contact: <a href="mailto:kmc-samulnori@gmail.com">kmc-samulnori@gmail.com</a></p></div>
+            <div class="admin-footer-bottom"><p>© 2026 KMC Samulnori. All Rights Reserved.</p></div>
+        </div>
+    </footer>
+</div>
+
+<template id="member-editor-template">
+    <article class="member-editor-card">
+        <button class="member-drag-handle" draggable="true" type="button" title="Drag to reorder" aria-label="Drag member to reorder"><span></span><span></span><span></span></button>
+        <div class="member-editor-card-header">
+            <h3>Member <span class="member-number"></span></h3>
+            <button class="admin-danger-button admin-small-button remove-member" type="button">Remove</button>
+        </div>
+        <div class="team-editor-grid team-member-fields">
+            <div class="admin-field">
+                <label>Name</label>
+                <input class="member-name" type="text" required>
+            </div>
+            <div class="admin-field">
+                <label>Age</label>
+                <input class="member-age" type="number" min="1" max="120" inputmode="numeric" required>
+            </div>
+            <div class="admin-field">
+                <label>Service</label>
+                <input class="member-service" type="text" placeholder="Example: ~2 years">
+            </div>
+        </div>
+    </article>
+</template>
+
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-storage-compat.js"></script>
+<script src="../js/config.js?v=20260725p3a"></script><script src="../js/firebase.js?v=20260725p3a"></script><script src="../js/admin-session.js?v=20260905polish1"></script><script src="../js/site-information.js?v=20260906ui1"></script><script src="../js/admin-tools.js?v=20260905polish1"></script><script src="../js/admin-motion.js?v=20260725p3a"></script>
+<script src="../js/image-optimizer.js?v=20260830teamhero2"></script>
+
+<script src="../js/admin-team.js?v=20260905webp-20260830teamhero2"></script>
+
+<script src="../js/admin-header.js?v=20260905polish1"></script></body>
+</html>

@@ -12,7 +12,7 @@
         if (!Number.isFinite(remaining) || remaining <= 0) {
             if (!signingOut) signingOut = auth.signOut().finally(() => {
                 signingOut = null;
-                if (!/\/login\.html$/.test(location.pathname)) location.replace("login.html?expired=1");
+                if (!/\/admin\/login\/?$/.test(location.pathname)) location.replace("/admin/login/?expired=1");
             });
             await signingOut;
             return false;

@@ -181,7 +181,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const thumbnailRepairAttempted = new Set();
     let thumbnailRepairRunning = false;
 
-    const returnToLogin = () => location.replace("login.html");
+    const returnToLogin = () => location.replace("/admin/login/");
     if (!auth || !db || !storage) {
         returnToLogin();
         return;

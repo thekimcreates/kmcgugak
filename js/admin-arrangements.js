@@ -462,13 +462,13 @@ document.addEventListener("DOMContentLoaded", () => {
       status(pageStatus, "Unable to save changes. Check your connection and try again.", "error");
     }
   };
-  logout.onclick = async () => { await tools.signOut(auth); location.replace("login.html"); };
+  logout.onclick = async () => { await tools.signOut(auth); location.replace("/admin/login/"); };
 
   if (!auth || !db || !storage) { loading.textContent = "Firebase could not be initialized."; return; }
   auth.onAuthStateChanged(async user => {
-    if (!user) return location.replace("login.html");
+    if (!user) return location.replace("/admin/login/");
     try {
-      if (!await tools.verifyAdmin(auth, db, user)) { await tools.signOut(auth); return location.replace("login.html"); }
+      if (!await tools.verifyAdmin(auth, db, user)) { await tools.signOut(auth); return location.replace("/admin/login/"); }
       email.textContent = user.email || "Administrator";
       const snapshot = await docRef.get();
       if (snapshot.exists) state = { arrangements: [], instruments: [], ...snapshot.data() };

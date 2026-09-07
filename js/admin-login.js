@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const goToDashboard = () => {
     if (redirectStarted) return;
     redirectStarted = true;
-    window.location.replace("dashboard.html");
+    window.location.replace("/admin/dashboard/");
   };
 
   const authorized = user => tools.verifyAdmin(auth, db, user);

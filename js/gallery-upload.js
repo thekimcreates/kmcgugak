@@ -355,7 +355,7 @@ document.addEventListener("DOMContentLoaded", () => {
             $("upload-submit").setAttribute("aria-label", "Upload complete");
             $("upload-submit").removeAttribute("aria-busy");
             returnTimer = setTimeout(() => {
-                location.assign(new URL(`performances.html?uploaded=${Date.now()}#${encodeURIComponent(selected.id)}`, document.baseURI).href);
+                location.assign(new URL(`/performances/?uploaded=${Date.now()}#${encodeURIComponent(selected.id)}`, document.baseURI).href);
             }, 3000);
         } catch (error) {
             status(error.message, true); $("upload-submit").textContent = "Submit";

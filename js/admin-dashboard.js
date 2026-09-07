@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function redirectToLogin() {
         if (redirecting) return;
         redirecting = true;
-        window.location.replace("login.html");
+        window.location.replace("/admin/login/");
     }
 
     function showVerificationError(error) {

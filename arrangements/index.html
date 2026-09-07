@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base href="/">
+    <link rel="icon" type="image/png" href="/assets/logo/kmcoc-circlelogo.png">
+    <link rel="apple-touch-icon" href="/assets/logo/kmcoc-circlelogo.png">
+    <link rel="canonical" href="https://kmcoc.org/arrangements/">
+    <script>if (/\/index\.html$/.test(location.pathname)) history.replaceState(null, "", location.pathname.replace(/index\.html$/, "") + location.search + location.hash);</script>
+    <!-- ======================================
+         KMC SAMULNORI WEBSITE
+         Version 3.0
+         Arrangements Page
+    ======================================= -->
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Arrangements | KMC Gugak</title>
+
+    <meta
+        name="description"
+        content="Explore KMC Samulnori's five Korean percussion arrangements and the instruments used in each performance."
+    >
+
+    <meta name="theme-color" content="#ffffff">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="dns-prefetch" href="//www.gstatic.com">
+    <link rel="dns-prefetch" href="//firestore.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <link rel="stylesheet" href="css/style.css?v=20260830cards1">
+    <link rel="stylesheet" href="css/arrangements.css?v=20260906ui1">
+<link rel="stylesheet" href="css/site-polish.css?v=20260906ui1">
+<script src="js/logo-cache.js?v=20260906ui1"></script>
+</head>
+
+<body class="arrangements-page">
+
+<!-- ======================================
+     NAVIGATION
+======================================= -->
+
+<header class="navbar" id="navbar">
+    <nav class="nav-container" aria-label="Main navigation">
+
+        <a href="/" class="logo" aria-label="KMC Samulnori home">
+            <picture>
+                
+                <img
+                    data-site-logo="full" data-logo-fallback="assets/logo/kmc-gugak-animated-source.png"
+                    alt="KMC Samulnori Logo"
+                >
+            </picture>
+        </a>
+
+        <ul class="nav-links">
+            <li><a href="/">Home</a></li>
+            <li><a href="/about/">About</a></li>
+            <li><a href="/performances/">Performances</a></li>
+            <li><a href="/arrangements/" class="active" aria-current="page">Arrangements</a></li>
+            <li><a href="/team/">Team</a></li>
+            <li><a href="/admin/login/">Login</a></li>
+        </ul>
+
+        <button
+            class="menu-toggle"
+            id="menu-toggle"
+            type="button"
+            aria-label="Open navigation menu"
+            aria-expanded="false"
+            aria-controls="mobile-menu"
+        >
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+
+    <div class="mobile-menu" id="mobile-menu">
+        <a href="/">Home</a>
+        <a href="/about/">About</a>
+        <a href="/performances/">Performances</a>
+        <a href="/arrangements/" class="active" aria-current="page">Arrangements</a>
+        <a href="/team/">Team</a>
+        <a href="/admin/login/">Login</a>
+    </div>
+</header>
+
+<main>
+    <section class="arrangements-hero section" aria-labelledby="arrangements-page-title">
+        <div class="section-container">
+            <header class="arrangements-page-header reveal"><h1 id="arrangements-page-title">Arrangements</h1></header>
+        </div>
+    </section>
+    <section class="arrangements-list-section" aria-label="KMC Samulnori arrangements">
+        <div class="section-container">
+            <div id="arrangements-list" class="arrangements-list" aria-live="polite"></div>
+        </div>
+    </section>
+</main>
+<div id="arrangement-backdrop" class="arrangement-backdrop" aria-hidden="true"></div>
+<div id="arrangement-detail-root"></div>
+<!-- ======================================
+     FOOTER
+======================================= -->
+
+<footer class="footer">
+    <div class="footer-container">
+        <div class="footer-logo">
+            <img data-site-logo="full" data-logo-fallback="assets/logo/kmc-gugak-animated-source.png" alt="KMC Samulnori Logo">
+        </div>
+        <div class="footer-contact">
+            <p>
+                Contact:
+                <a href="mailto:kmc-samulnori@gmail.com">kmc-samulnori@gmail.com</a>
+            </p>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2026 KMC Samulnori. All Rights Reserved.</p>
+        </div>
+    </div>
+</footer>
+
+<script defer src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+<script defer src="js/public.bundle.js?v=20260725p3e"></script><script defer src="js/site-information.js?v=20260906ui1"></script>
+<script defer src="js/arrangements-data.js?v=20260725p2e"></script>
+
+
+
+<script defer src="js/arrangements.js?v=20260830arrangements"></script>
+</body>
+</html>

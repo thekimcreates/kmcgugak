@@ -23,7 +23,7 @@
         arrangements.forEach((item, index) => {
             const link = document.createElement("a");
             link.className = "arrangement-card reveal arrangement-card-link visible";
-            link.href = `arrangements.html#${encodeURIComponent(item.id)}`;
+            link.href = `/arrangements/#${encodeURIComponent(item.id)}`;
             link.setAttribute("aria-label", `View ${item.name || "arrangement"} details`);
             const image = document.createElement("img");
             image.src = item.photoUrl || "";
