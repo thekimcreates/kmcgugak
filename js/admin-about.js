@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const revertButton = document.getElementById("revert-information");
   const sectionsEditor = document.getElementById("information-sections-editor");
   const addSection = document.getElementById("add-information-section");
-  const redirect = () => location.replace("/admin/login/");
+  const redirect = () => location.replace("/login");
   let current = window.KMCSiteInformation?.fallback || {};
   let pending = { circle: null, full: null };
   let savedTimer = null;

@@ -1116,7 +1116,11 @@ document.addEventListener("DOMContentLoaded", () => {
             detailClose.focus({ preventScroll: true });
         });
 
-        history.replaceState(null, "", `#${encodeURIComponent(record.id)}`);
+        history.replaceState(
+            null,
+            "",
+            `${location.pathname}${location.search}#${encodeURIComponent(record.id)}`
+        );
     }
 
     function closeDetail({ restoreHash = true } = {}) {

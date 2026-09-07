@@ -111,7 +111,8 @@ body[data-admin-page="dashboard"] .admin-nav [data-admin-page="dashboard"],
 body[data-admin-page="home-sections"] .admin-nav [data-admin-page="home-sections"],
 body[data-admin-page="performances"] .admin-nav [data-admin-page="performances"],
 body[data-admin-page="arrangements"] .admin-nav [data-admin-page="arrangements"],
-body[data-admin-page="team"] .admin-nav [data-admin-page="team"] {
+body[data-admin-page="team"] .admin-nav [data-admin-page="team"],
+body[data-admin-page="about"] .admin-nav [data-admin-page="about"] {
     opacity: 1;
 }
 
@@ -120,6 +121,7 @@ body[data-admin-page="home-sections"] .admin-nav [data-admin-page="home-sections
 body[data-admin-page="performances"] .admin-nav [data-admin-page="performances"]::after,
 body[data-admin-page="arrangements"] .admin-nav [data-admin-page="arrangements"]::after,
 body[data-admin-page="team"] .admin-nav [data-admin-page="team"]::after,
+body[data-admin-page="about"] .admin-nav [data-admin-page="about"]::after,
 .admin-nav a.active::after {
     content: "";
     position: absolute;
@@ -1387,17 +1389,15 @@ html {
 }
 
 .admin-motion-ready [data-admin-reveal] {
-    opacity: 0;
-    transform: translateY(22px) scale(0.992);
+    opacity: 1;
+    transform: none;
+    transition: none;
 }
 
 .admin-motion-ready [data-admin-reveal].admin-reveal-visible {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    transition:
-        opacity 0.72s var(--admin-motion-spring),
-        transform 0.78s var(--admin-motion-spring);
-    transition-delay: var(--admin-reveal-delay, 0ms);
+    transform: none;
+    transition: none;
 }
 
 .admin-site-header {
@@ -1535,7 +1535,7 @@ html {
 
 /* Newly loaded Firestore cards */
 .admin-new-record {
-    animation: admin-record-in 0.72s var(--admin-motion-spring) both;
+    animation: none;
 }
 
 @keyframes admin-record-in {
@@ -2462,11 +2462,11 @@ body[data-admin-page="arrangements"] .admin-user-meta {
 /* ========================================
    ABOUT + TEAM CONSISTENCY
 ======================================== */
-body[data-admin-page="information"] .admin-nav [data-admin-page="information"] {
+body[data-admin-page="about"] .admin-nav [data-admin-page="about"] {
     opacity: 1;
 }
 
-body[data-admin-page="information"] .admin-nav [data-admin-page="information"]::after {
+body[data-admin-page="about"] .admin-nav [data-admin-page="about"]::after {
     position: absolute;
     right: 0;
     bottom: 4px;

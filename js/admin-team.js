@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let savedTimer = null;
 
   const fallback = { heroImageUrl:"assets/team/team-hero.webp", instructorImageUrl:"assets/team/instructor.webp", instructorName:"Susanna Hong", instructorKoreanName:"홍수잔나", teacherMessageKo:"", teacherMessageEn:"", members:[] };
-  const redirect = () => location.replace("/admin/login/");
+  const redirect = () => location.replace("/login");
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : `member-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const setStatus = (message="", type="") => { status.textContent=message; status.className="login-status"; if(type) status.classList.add(`is-${type}`); };
   const updateNumbers = () => [...memberList.children].forEach((card,index)=>{ card.querySelector(".member-number").textContent=String(index+1); card.dataset.order=String(index); });

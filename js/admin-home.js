@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function redirectToLogin() {
         if (redirecting) return;
         redirecting = true;
-        window.location.replace("/admin/login/");
+        window.location.replace("/login");
     }
 
     function normalize(value) {
