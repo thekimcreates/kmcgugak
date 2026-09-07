@@ -39,6 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (trigger.disabled) return;
         document.getElementById("performance-arrangement-trigger")?.getAttribute("aria-expanded") === "true" &&
             document.getElementById("performance-arrangement-trigger").click();
+        document.getElementById("performance-member-trigger")?.getAttribute("aria-expanded") === "true" &&
+            document.getElementById("performance-member-trigger").click();
         popover.hidden = false;
         trigger.setAttribute("aria-expanded", "true");
         wrapper.classList.add("is-open");

@@ -63,6 +63,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const tools = window.kmcAdminTools;
     const imageOptimizer = window.kmcImageOptimizer;
     const get = (id) => document.getElementById(id);
+    const memberReferenceId = (member, index = 0) => {
+        const year = String(member?.service || "").match(/\b(?:19|20)(\d{2})\s*[-–—]/)?.[1];
+        const parts = String(member?.name || "").trim().normalize("NFKD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .split(/\s+/)
+            .map((part) => part.replace(/[^a-z0-9]/gi, "").toLocaleLowerCase())
+            .filter(Boolean);
+        if (!year || !parts.length) return String(member?.id || `legacy-member-${index}`);
+        return `${year}${parts.at(-1)}${parts[0][0]}`;
+    };
 
     const page = get("performances-admin");
     const loading = get("performances-loading");
@@ -416,9 +426,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function getRecordMemberIds(record) {
-        if (Array.isArray(record.memberIds)) return record.memberIds;
+        const storedIds = Array.isArray(record.memberIds) ? record.memberIds.map(String) : [];
         const legacyNames = Array.isArray(record.members) ? record.members : [];
-        return memberRecords.filter(member => legacyNames.includes(member.name)).map(member => member.id);
+        return memberRecords
+            .filter(member => storedIds.includes(member.id) || legacyNames.includes(member.name))
+            .map(member => member.id);
     }
 
     function renderMembers(selected = []) {
@@ -449,7 +461,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const snapshot = await db.collection("siteContent").doc("team").get();
             const data = snapshot.exists ? snapshot.data() : {};
-            memberRecords = Array.isArray(data.members) ? [...data.members].sort((a,b)=>(a.order??0)-(b.order??0)).map((member,index)=>({ ...member, id:member.id || `legacy-member-${index}` })) : [];
+            memberRecords = Array.isArray(data.members) ? [...data.members].sort((a,b)=>(a.order??0)-(b.order??0)).map((member,index)=>({ ...member, id:memberReferenceId(member,index) })) : [];
         } catch (error) {
             console.error("Unable to load members:", error);
             memberRecords = [];

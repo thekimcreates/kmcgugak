@@ -1695,7 +1695,7 @@ html {
 }
 
 .team-member-fields {
-    grid-template-columns: minmax(0, 1.5fr) minmax(110px, 0.5fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.5fr) minmax(90px, 0.45fr) minmax(0, 1fr);
     margin-bottom: 0;
 }
 

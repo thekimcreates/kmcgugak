@@ -1385,13 +1385,14 @@ body.performance-gallery-viewer-open {
     position: relative;
     z-index: 12;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(170px, 0.42fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(150px, 0.55fr);
     align-items: end;
     gap: clamp(18px, 3vw, 34px);
     margin: 0 0 34px;
 }
 
 .performance-arrangement-filter,
+.performance-member-filter,
 .performance-year-filter {
     position: relative;
     display: grid;
@@ -1443,7 +1444,8 @@ body.performance-gallery-viewer-open {
 }
 
 .performance-arrangement-trigger:hover,
-.performance-arrangement-filter.is-open .performance-arrangement-trigger {
+.performance-arrangement-filter.is-open .performance-arrangement-trigger,
+.performance-member-filter.is-open .performance-arrangement-trigger {
     border-color: rgba(127, 0, 32, 0.38);
 }
 
@@ -1469,7 +1471,8 @@ body.performance-gallery-viewer-open {
     transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.performance-arrangement-filter.is-open .performance-filter-chevron {
+.performance-arrangement-filter.is-open .performance-filter-chevron,
+.performance-member-filter.is-open .performance-filter-chevron {
     transform: translateY(2px) rotate(225deg);
 }
 
@@ -1650,6 +1653,7 @@ body.performance-gallery-viewer-open {
         gap: 18px;
     }
 
+    .performance-member-filter,
     .performance-year-filter {
         min-width: 0;
     }

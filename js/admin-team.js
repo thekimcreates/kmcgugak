@@ -33,10 +33,23 @@ document.addEventListener("DOMContentLoaded", () => {
   let pendingHero = null;
   let pendingTeacherImage = null;
   let savedTimer = null;
+  let requiresMemberIdMigration = false;
 
   const fallback = { heroImageUrl:"assets/team/team-hero.webp", instructorImageUrl:"assets/team/instructor.webp", instructorName:"Susanna Hong", instructorKoreanName:"홍수잔나", teacherMessageKo:"", teacherMessageEn:"", members:[] };
   const redirect = () => location.replace("/login");
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : `member-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const serviceYearPrefix = service => String(service || "").match(/\b(?:19|20)(\d{2})\s*[-–—]/)?.[1] || "";
+  const memberReferenceId = (name, service) => {
+    const parts = String(name || "").trim().normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .split(/\s+/)
+      .map(part => part.replace(/[^a-z0-9]/gi, "").toLowerCase())
+      .filter(Boolean);
+    const year = serviceYearPrefix(service) || "00";
+    const firstInitial = parts[0]?.[0] || "x";
+    const lastName = parts.at(-1) || "member";
+    return `${year}${lastName}${firstInitial}`;
+  };
   const setStatus = (message="", type="") => { status.textContent=message; status.className="login-status"; if(type) status.classList.add(`is-${type}`); };
   const updateNumbers = () => [...memberList.children].forEach((card,index)=>{ card.querySelector(".member-number").textContent=String(index+1); card.dataset.order=String(index); });
   const setDirty = (dirty=true) => {
@@ -130,9 +143,10 @@ document.addEventListener("DOMContentLoaded", () => {
     savedTimer = window.setTimeout(() => setDirty(false), 3000);
   }
 
-  function addMemberEditor(member={ id:uid(), name:"", age:"", service:"" }, shouldScroll=false) {
+  function addMemberEditor(member={ id:"", name:"", age:"", service:"" }, shouldScroll=false) {
     const card = memberTemplate.content.firstElementChild.cloneNode(true);
     card.dataset.memberId = member.id || uid();
+    card.dataset.originalMemberId = member.id || "";
     card.querySelector(".member-name").value = member.name || "";
     card.querySelector(".member-age").value = member.age ?? "";
     card.querySelector(".member-service").value = member.service || "";
@@ -169,7 +183,9 @@ document.addEventListener("DOMContentLoaded", () => {
     koEditor.setHtml(data.teacherMessageKoHtml || tools.plainTextToHtml(data.teacherMessageKo || ""));
     enEditor.setHtml(data.teacherMessageEnHtml || tools.plainTextToHtml(data.teacherMessageEn || ""));
     memberList.replaceChildren();
-    [...(Array.isArray(data.members)?data.members:[])].sort((a,b)=>(a.order??0)-(b.order??0)).forEach(member=>addMemberEditor(member,false));
+    const members=[...(Array.isArray(data.members)?data.members:[])].sort((a,b)=>(a.order??0)-(b.order??0));
+    requiresMemberIdMigration=members.some(member=>member.id!==memberReferenceId(member.name,member.service));
+    members.forEach(member=>addMemberEditor(member,false));
   }
 
   auth?.onAuthStateChanged(async user => {
@@ -180,6 +196,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const snap=await db.collection("siteContent").doc("team").get();
       populate(snap.exists?{...fallback,...snap.data()}:fallback);
       loading.hidden=true; page.hidden=false;
+      if(requiresMemberIdMigration){
+        setDirty();
+        saveMessage.textContent="Save changes to update the member reference IDs.";
+      }
     } catch(error){ console.error(error); redirect(); }
   });
 
@@ -191,16 +211,65 @@ document.addEventListener("DOMContentLoaded", () => {
   addMemberButton.addEventListener("click",()=>{ addMemberEditor({},true); setDirty(); });
   form.addEventListener("submit", async event => {
     event.preventDefault();
-    const members=[...memberList.querySelectorAll(".member-editor-card")].map((card,order)=>({
-      id:card.dataset.memberId||uid(), name:card.querySelector(".member-name").value.trim(), age:Number(card.querySelector(".member-age").value), service:card.querySelector(".member-service").value.trim(), order
-    }));
-    if(members.some(m=>!m.name||!Number.isFinite(m.age))) { setDirty(); return setStatus("Every member needs a name and age.","error"); }
+    const memberDrafts=[...memberList.querySelectorAll(".member-editor-card")].map((card,order)=>{
+      const name=card.querySelector(".member-name").value.trim();
+      const service=card.querySelector(".member-service").value.trim();
+      return {
+        id:memberReferenceId(name,service),
+        previousId:card.dataset.originalMemberId || card.dataset.memberId || "",
+        name,
+        age:Number(card.querySelector(".member-age").value),
+        service,
+        order
+      };
+    });
+    if(memberDrafts.some(member=>!member.name||!Number.isFinite(member.age)||!serviceYearPrefix(member.service))) {
+      setDirty();
+      return setStatus("Every member needs a name, age, and service dates in YYYY-YYYY format.","error");
+    }
+    const duplicateIds=memberDrafts.filter((member,index,list)=>list.findIndex(item=>item.id===member.id)!==index).map(member=>member.id);
+    if(duplicateIds.length) {
+      setDirty();
+      return setStatus("Two members would receive the same reference ID. Check their names and service dates.","error");
+    }
+    const idChanges=new Map(memberDrafts.filter(member=>member.previousId&&member.previousId!==member.id).map(member=>[member.previousId,member.id]));
+    const members=memberDrafts.map(({previousId,...member})=>member);
+    const memberIdsByName=new Map(members.map(member=>[member.name.toLocaleLowerCase(),member.id]));
+    const shouldMigrateReferences=requiresMemberIdMigration||idChanges.size>0;
     showSaving();
     try {
       const hero = await uploadHero();
       const teacherImage = await uploadTeacherImage();
       const data={ ...hero, ...teacherImage, instructorName:document.getElementById("instructor-name").value.trim(), instructorKoreanName:document.getElementById("instructor-korean-name").value.trim(), teacherMessageKoHtml:koEditor.getHtml(), teacherMessageEnHtml:enEditor.getHtml(), teacherMessageKo:koEditor.getText(), teacherMessageEn:enEditor.getText(), members, updatedAt:firebase.firestore.FieldValue.serverTimestamp() };
-      await db.collection("siteContent").doc("team").set(data,{merge:true});
+      if (shouldMigrateReferences) {
+        const performanceSnapshot=await db.collection("performances").get();
+        const referenceUpdates=performanceSnapshot.docs.flatMap(document=>{
+          const performance=document.data();
+          const oldIds=Array.isArray(performance.memberIds)?performance.memberIds.map(String):[];
+          const idsFromNames=(Array.isArray(performance.members)?performance.members:[])
+            .map(name=>memberIdsByName.get(String(name).trim().toLocaleLowerCase()))
+            .filter(Boolean);
+          const mappedOldIds=oldIds.map(id=>idChanges.get(id)||id);
+          const nextIds=[...new Set(idsFromNames.length?idsFromNames:mappedOldIds)];
+          return oldIds.join("\u0000")===nextIds.join("\u0000")?[]:[{reference:document.ref,memberIds:nextIds}];
+        });
+        const firstBatch=db.batch();
+        firstBatch.set(db.collection("siteContent").doc("team"),data,{merge:true});
+        referenceUpdates.slice(0,449).forEach(update=>firstBatch.update(update.reference,{memberIds:update.memberIds}));
+        await firstBatch.commit();
+        for(let start=449;start<referenceUpdates.length;start+=450){
+          const batch=db.batch();
+          referenceUpdates.slice(start,start+450).forEach(update=>batch.update(update.reference,{memberIds:update.memberIds}));
+          await batch.commit();
+        }
+      } else {
+        await db.collection("siteContent").doc("team").set(data,{merge:true});
+      }
+      [...memberList.querySelectorAll(".member-editor-card")].forEach((card,index)=>{
+        card.dataset.memberId=members[index].id;
+        card.dataset.originalMemberId=members[index].id;
+      });
+      requiresMemberIdMigration=false;
       currentData=data; pendingHero=null; pendingTeacherImage=null; setHeroPreview(data.heroImageUrl); setTeacherImagePreview(data.instructorImageUrl); heroNote.textContent=""; teacherImageNote.textContent=""; showSaved();
       await tools.logActivity(db,auth,"Updated","team","team","Team page");
     } catch(error){ console.error(error); setDirty(); setStatus("Unable to save. Check your Firestore rules and connection.","error"); }

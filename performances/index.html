@@ -29,7 +29,7 @@
     >
 
     <link rel="stylesheet" href="css/style.css?v=20260906polish2">
-    <link rel="stylesheet" href="css/performances.css?v=20260906polish2">
+    <link rel="stylesheet" href="css/performances.css?v=20260907memberfilters2">
 <link rel="stylesheet" href="css/site-polish.css?v=20260906ui1">
     <link rel="stylesheet" href="css/gallery-upload.css?v=20260906ui1">
 <script src="js/logo-cache.js?v=20260906ui1"></script>
@@ -132,6 +132,40 @@
 
                         <div class="performance-check-divider" aria-hidden="true"></div>
                         <div class="performance-filter-options" id="performance-filter-options"></div>
+                    </div>
+                </div>
+
+                <div class="performance-member-filter" id="performance-member-filter">
+                    <span class="performance-filter-label">Filter by User</span>
+
+                    <button
+                        class="performance-arrangement-trigger"
+                        id="performance-member-trigger"
+                        type="button"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-controls="performance-member-popover"
+                        disabled
+                    >
+                        <span id="performance-member-summary">All</span>
+                        <span class="performance-filter-chevron" aria-hidden="true"></span>
+                    </button>
+
+                    <div
+                        class="performance-arrangement-popover"
+                        id="performance-member-popover"
+                        role="group"
+                        aria-label="Filter performances by user"
+                        hidden
+                    >
+                        <label class="performance-check-option performance-check-all">
+                            <input id="performance-member-all" type="checkbox" checked>
+                            <span class="performance-checkmark" aria-hidden="true"></span>
+                            <span>All</span>
+                        </label>
+
+                        <div class="performance-check-divider" aria-hidden="true"></div>
+                        <div class="performance-filter-options" id="performance-member-options"></div>
                     </div>
                 </div>
 
@@ -305,8 +339,8 @@
 <script defer src="js/video-preview.js?v=20260905firstframe2"></script>
 <script defer src="js/performance-list-data.js?v=20260905polish1"></script>
 <script defer src="js/performance-format.js?v=20260906polish2"></script>
-<script defer src="js/performances.js?v=20260907routes2"></script>
+<script defer src="js/performances.js?v=20260907memberfilters2"></script>
 
-<script defer src="js/performance-year-filter.js?v=20260906polish2"></script>
+<script defer src="js/performance-year-filter.js?v=20260907memberfilters2"></script>
 </body>
 </html>

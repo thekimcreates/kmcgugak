@@ -14,6 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const arrangementSummary = document.getElementById("performance-arrangement-summary");
     const arrangementOptions = document.getElementById("performance-filter-options");
     const allArrangementsInput = document.getElementById("performance-filter-all");
+    const memberFilter = document.getElementById("performance-member-filter");
+    const memberTrigger = document.getElementById("performance-member-trigger");
+    const memberPopover = document.getElementById("performance-member-popover");
+    const memberSummary = document.getElementById("performance-member-summary");
+    const memberOptions = document.getElementById("performance-member-options");
+    const allMembersInput = document.getElementById("performance-member-all");
 
     const detail = document.getElementById("performance-detail");
     const detailShell = detail?.querySelector(".performance-detail-shell");
@@ -62,6 +68,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let galleryOpeningReady = Promise.resolve();
     let finishGalleryOpening = null;
     const selectedArrangements = new Set();
+    const selectedMembers = new Set();
+    let filtersInitializedFromUrl = false;
     const CACHE_KEYS = {
         performances: "kmc-public-performances-v3",
         arrangements: "kmc-public-performance-arrangements-v2",
@@ -1116,11 +1124,7 @@ document.addEventListener("DOMContentLoaded", () => {
             detailClose.focus({ preventScroll: true });
         });
 
-        history.replaceState(
-            null,
-            "",
-            `${location.pathname}${location.search}#${encodeURIComponent(record.id)}`
-        );
+        updateReferenceUrl(record.id);
     }
 
     function closeDetail({ restoreHash = true } = {}) {
@@ -1136,9 +1140,7 @@ document.addEventListener("DOMContentLoaded", () => {
             detail.setAttribute("aria-hidden", "true");
             activeRecord = null;
 
-            if (restoreHash && location.hash) {
-                history.replaceState(null, "", location.pathname + location.search);
-            }
+            if (restoreHash && location.hash) updateReferenceUrl("");
 
             lastFocusedElement?.focus?.({ preventScroll: true });
         }, 300);
@@ -1177,6 +1179,78 @@ document.addEventListener("DOMContentLoaded", () => {
         return String(value || "").trim().toLocaleLowerCase();
     }
 
+    function referenceSlug(value) {
+        return String(value || "")
+            .normalize("NFKD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLocaleLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "");
+    }
+
+    function memberReferenceId(member, index = 0) {
+        const year = String(member?.service || "").match(/\b(?:19|20)(\d{2})\s*[-–—]/)?.[1];
+        const parts = String(member?.name || "").trim().normalize("NFKD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .split(/\s+/)
+            .map((part) => part.replace(/[^a-z0-9]/gi, "").toLocaleLowerCase())
+            .filter(Boolean);
+        if (!year || !parts.length) return String(member?.id || `legacy-member-${index}`);
+        return `${year}${parts.at(-1)}${parts[0][0]}`;
+    }
+
+    function readReferenceHash() {
+        const rawId = location.hash.slice(1);
+        if (!rawId) return "";
+        try { return decodeURIComponent(rawId); } catch (_) { return rawId; }
+    }
+
+    function readReferenceFilters() {
+        const result = { arrangements: new Set(), users: new Set(), year: "" };
+        const query = String(location.search || "").replace(/^\?/, "").replace(/\/$/, "");
+
+        query.split(/[,&]/).forEach((part) => {
+            const separator = part.indexOf("=");
+            if (separator < 0) return;
+
+            const key = part.slice(0, separator).trim().toLocaleLowerCase();
+            let value = part.slice(separator + 1).trim();
+            try { value = decodeURIComponent(value); } catch (_) { /* Keep the readable value. */ }
+
+            if (key === "arrangement" && referenceSlug(value)) {
+                result.arrangements.add(referenceSlug(value));
+            }
+            if (key === "user" && referenceSlug(value)) result.users.add(referenceSlug(value));
+            if (key === "year" && /^\d{4}$/.test(value)) result.year = value;
+        });
+
+        return result;
+    }
+
+    const initialReferenceFilters = readReferenceFilters();
+
+    function selectedArrangementSlugs() {
+        return [...arrangementOptions.querySelectorAll('input[type="checkbox"]:checked')]
+            .map((input) => input.dataset.referenceSlug || referenceSlug(input.dataset.label || input.value))
+            .filter(Boolean);
+    }
+
+    function selectedMemberIds() {
+        return [...memberOptions.querySelectorAll('input[type="checkbox"]:checked')]
+            .map((input) => referenceSlug(input.value))
+            .filter(Boolean);
+    }
+
+    function updateReferenceUrl(performanceId = activeRecord?.id || "") {
+        const parts = selectedArrangementSlugs().map((slug) => `arrangement=${slug}`);
+        selectedMemberIds().forEach((id) => parts.push(`user=${id}`));
+        if (yearFilter.value && yearFilter.value !== "all") parts.push(`year=${yearFilter.value}`);
+
+        let url = parts.length ? `/performances?${parts.join(",")}/` : "/performances/";
+        if (performanceId) url += `#${encodeURIComponent(performanceId)}`;
+        history.replaceState(null, "", url);
+    }
+
     function getRecordArrangements(record) {
         return getArrangementLabels(record).map((item) => String(item || "").trim()).filter(Boolean);
     }
@@ -1207,7 +1281,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function setAllArrangements() {
+    function setAllArrangements({ updateUrl = true } = {}) {
         selectedArrangements.clear();
 
         arrangementOptions.querySelectorAll('input[type="checkbox"]').forEach((input) => {
@@ -1217,6 +1291,7 @@ document.addEventListener("DOMContentLoaded", () => {
         allArrangementsInput.checked = true;
         updateArrangementSummary();
         render();
+        if (updateUrl) updateReferenceUrl();
     }
 
     function createArrangementFilterOption(option) {
@@ -1228,6 +1303,7 @@ document.addEventListener("DOMContentLoaded", () => {
         input.type = "checkbox";
         input.value = option.key;
         input.dataset.label = arrangement;
+        input.dataset.referenceSlug = referenceSlug(option.key || arrangement);
 
         const checkmark = document.createElement("span");
         checkmark.className = "performance-checkmark";
@@ -1253,6 +1329,7 @@ document.addEventListener("DOMContentLoaded", () => {
             allArrangementsInput.checked = false;
             updateArrangementSummary();
             render();
+            updateReferenceUrl();
         });
 
         label.append(input, checkmark, text);
@@ -1281,8 +1358,81 @@ document.addEventListener("DOMContentLoaded", () => {
         updateArrangementSummary();
     }
 
+    function updateMemberSummary() {
+        const selectedInputs = [...memberOptions.querySelectorAll('input[type="checkbox"]:checked')];
+        const selectedLabels = selectedInputs.map((input) => input.dataset.label || input.value);
+
+        if (selectedLabels.length === 0) {
+            memberSummary.textContent = "All";
+            allMembersInput.checked = true;
+            return;
+        }
+
+        allMembersInput.checked = false;
+        if (selectedLabels.length === 1) memberSummary.textContent = selectedLabels[0];
+        else if (selectedLabels.length === 2) memberSummary.textContent = `${selectedLabels[0]} + ${selectedLabels[1]}`;
+        else memberSummary.textContent = `${selectedLabels.length} selected`;
+    }
+
+    function setAllMembers({ updateUrl = true } = {}) {
+        selectedMembers.clear();
+        memberOptions.querySelectorAll('input[type="checkbox"]').forEach((input) => { input.checked = false; });
+        allMembersInput.checked = true;
+        updateMemberSummary();
+        render();
+        if (updateUrl) updateReferenceUrl();
+    }
+
+    function createMemberFilterOption(member) {
+        const label = document.createElement("label");
+        label.className = "performance-check-option";
+
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.value = member.id;
+        input.dataset.label = member.name;
+
+        const checkmark = document.createElement("span");
+        checkmark.className = "performance-checkmark";
+        checkmark.setAttribute("aria-hidden", "true");
+
+        const text = document.createElement("span");
+        text.textContent = member.name;
+
+        input.addEventListener("change", () => {
+            if (input.checked) selectedMembers.add(input.value);
+            else selectedMembers.delete(input.value);
+
+            if (selectedMembers.size === 0) {
+                setAllMembers();
+                return;
+            }
+
+            allMembersInput.checked = false;
+            updateMemberSummary();
+            render();
+            updateReferenceUrl();
+        });
+
+        label.append(input, checkmark, text);
+        return label;
+    }
+
+    function populateMemberFilter() {
+        const members = [...memberRecords]
+            .filter((member) => member?.id && member?.name)
+            .sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));
+        memberOptions.replaceChildren(...members.map(createMemberFilterOption));
+        memberTrigger.disabled = members.length === 0;
+        allMembersInput.checked = true;
+        updateMemberSummary();
+    }
+
     function openArrangementPopover() {
         if (arrangementTrigger.disabled) return;
+        closeMemberPopover();
+        const yearTrigger = document.getElementById("performance-year-trigger");
+        if (yearTrigger?.getAttribute("aria-expanded") === "true") yearTrigger.click();
         arrangementPopover.hidden = false;
         arrangementTrigger.setAttribute("aria-expanded", "true");
         arrangementFilter.classList.add("is-open");
@@ -1302,6 +1452,27 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function openMemberPopover() {
+        if (memberTrigger.disabled) return;
+        closeArrangementPopover();
+        const yearTrigger = document.getElementById("performance-year-trigger");
+        if (yearTrigger?.getAttribute("aria-expanded") === "true") yearTrigger.click();
+        memberPopover.hidden = false;
+        memberTrigger.setAttribute("aria-expanded", "true");
+        memberFilter.classList.add("is-open");
+    }
+
+    function closeMemberPopover() {
+        memberPopover.hidden = true;
+        memberTrigger.setAttribute("aria-expanded", "false");
+        memberFilter.classList.remove("is-open");
+    }
+
+    function toggleMemberPopover() {
+        if (memberPopover.hidden) openMemberPopover();
+        else closeMemberPopover();
+    }
+
     function recordMatchesArrangementFilter(record) {
         if (selectedArrangements.size === 0) return true;
 
@@ -1310,6 +1481,20 @@ document.addEventListener("DOMContentLoaded", () => {
         return recordArrangements.some((arrangement) =>
             selectedArrangements.has(arrangement)
         );
+    }
+
+    function recordMatchesMemberFilter(record) {
+        if (selectedMembers.size === 0) return true;
+        const recordIds = new Set(Array.isArray(record.memberIds) ? record.memberIds.map(String) : []);
+        const recordNames = new Set(Array.isArray(record.members)
+            ? record.members.map((name) => String(name).trim().toLocaleLowerCase())
+            : []);
+
+        return [...selectedMembers].some((id) => {
+            if (recordIds.has(id)) return true;
+            const member = memberRecords.find((item) => item.id === id);
+            return member && recordNames.has(String(member.name).trim().toLocaleLowerCase());
+        });
     }
 
     function updateCount(visibleCount) {
@@ -1331,7 +1516,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const matchesYear = selectedYear === "all" ||
                 String(record.date || "").startsWith(selectedYear);
 
-            return matchesYear && recordMatchesArrangementFilter(record);
+            return matchesYear && recordMatchesArrangementFilter(record) && recordMatchesMemberFilter(record);
         });
 
         grid.replaceChildren(...visible.map(createCard));
@@ -1412,9 +1597,13 @@ document.addEventListener("DOMContentLoaded", () => {
     galleryViewerClose?.addEventListener("click", closeGalleryViewer);
     galleryViewerPrevious?.addEventListener("click", () => selectGalleryItem(activeGalleryIndex - 1));
     galleryViewerNext?.addEventListener("click", () => selectGalleryItem(activeGalleryIndex + 1));
-    yearFilter.addEventListener("change", render);
+    yearFilter.addEventListener("change", () => {
+        render();
+        updateReferenceUrl();
+    });
 
     arrangementTrigger?.addEventListener("click", toggleArrangementPopover);
+    memberTrigger?.addEventListener("click", toggleMemberPopover);
 
     allArrangementsInput?.addEventListener("change", () => {
         if (allArrangementsInput.checked) {
@@ -1424,10 +1613,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    allMembersInput?.addEventListener("change", () => {
+        if (allMembersInput.checked) {
+            setAllMembers();
+        } else if (selectedMembers.size === 0) {
+            allMembersInput.checked = true;
+        }
+    });
+
     document.addEventListener("click", (event) => {
         if (!arrangementFilter?.contains(event.target)) {
             closeArrangementPopover();
         }
+        if (!memberFilter?.contains(event.target)) closeMemberPopover();
     });
 
     document.addEventListener("keydown", (event) => {
@@ -1449,6 +1647,11 @@ document.addEventListener("DOMContentLoaded", () => {
             arrangementTrigger.focus();
             return;
         }
+        if (event.key === "Escape" && !memberPopover.hidden) {
+            closeMemberPopover();
+            memberTrigger.focus();
+            return;
+        }
         if (event.key === "Escape" && !detail.hidden) {
             event.preventDefault();
             closeDetail();
@@ -1460,23 +1663,57 @@ document.addEventListener("DOMContentLoaded", () => {
     function refreshControlsAndCards({ reopenHash = false } = {}) {
         const selectedYear = yearFilter.value || "all";
         const selectedKeys = new Set(selectedArrangements);
+        const selectedSlugs = new Set(selectedArrangementSlugs());
+        const selectedMemberKeys = new Set(selectedMembers);
 
         populateYearFilter();
-        if ([...yearFilter.options].some((option) => option.value === selectedYear)) {
-            yearFilter.value = selectedYear;
+        populateArrangementFilter();
+        populateMemberFilter();
+        selectedArrangements.clear();
+        selectedMembers.clear();
+
+        if (!filtersInitializedFromUrl) {
+            if ([...yearFilter.options].some((option) => option.value === initialReferenceFilters.year)) {
+                yearFilter.value = initialReferenceFilters.year;
+            }
+            const hasArrangementOptions = Boolean(arrangementOptions.querySelector('input[type="checkbox"]'));
+            arrangementOptions.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+                const checked = initialReferenceFilters.arrangements.has(input.dataset.referenceSlug);
+                input.checked = checked;
+                if (checked) selectedArrangements.add(normalizeArrangement(input.value));
+            });
+            const hasMemberOptions = Boolean(memberOptions.querySelector('input[type="checkbox"]'));
+            memberOptions.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+                const checked = initialReferenceFilters.users.has(referenceSlug(input.value));
+                input.checked = checked;
+                if (checked) selectedMembers.add(input.value);
+            });
+            const arrangementsReady = initialReferenceFilters.arrangements.size === 0 || hasArrangementOptions;
+            const membersReady = initialReferenceFilters.users.size === 0 || hasMemberOptions;
+            filtersInitializedFromUrl = arrangementsReady && membersReady;
+        } else {
+            if ([...yearFilter.options].some((option) => option.value === selectedYear)) {
+                yearFilter.value = selectedYear;
+            }
+            arrangementOptions.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+                const key = normalizeArrangement(input.value);
+                const checked = selectedKeys.has(key) || selectedSlugs.has(input.dataset.referenceSlug);
+                input.checked = checked;
+                if (checked) selectedArrangements.add(key);
+            });
+            memberOptions.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+                const checked = selectedMemberKeys.has(input.value);
+                input.checked = checked;
+                if (checked) selectedMembers.add(input.value);
+            });
         }
 
-        populateArrangementFilter();
-        selectedArrangements.clear();
-        arrangementOptions.querySelectorAll('input[type="checkbox"]').forEach((input) => {
-            const key = normalizeArrangement(input.value);
-            const checked = selectedKeys.has(key);
-            input.checked = checked;
-            if (checked) selectedArrangements.add(key);
-        });
         allArrangementsInput.checked = selectedArrangements.size === 0;
+        allMembersInput.checked = selectedMembers.size === 0;
         updateArrangementSummary();
+        updateMemberSummary();
         render();
+        if (filtersInitializedFromUrl) updateReferenceUrl(readReferenceHash());
 
         if (activeRecord) {
             const updated = records.find((record) => record.id === activeRecord.id);
@@ -1501,7 +1738,10 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (_) { /* Storage may be unavailable in private browsing. */ }
     const cachedPerformances = readCache(CACHE_KEYS.performances);
     arrangementRecords = readCache(CACHE_KEYS.arrangements);
-    memberRecords = readCache(CACHE_KEYS.members);
+    memberRecords = readCache(CACHE_KEYS.members).map((member, index) => ({
+        ...member,
+        id: memberReferenceId(member, index)
+    }));
 
     if (cachedPerformances.length) {
         records = cachedPerformances;
@@ -1553,7 +1793,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const freshMembers = Array.isArray(data.members)
                     ? data.members.map((member, index) => ({
                         ...member,
-                        id: member.id || `legacy-member-${index}`
+                        id: memberReferenceId(member, index)
                     }))
                     : [];
                 metadataChanged = metadataChanged || stableStringify(freshMembers) !== stableStringify(memberRecords);

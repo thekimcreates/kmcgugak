@@ -30,6 +30,17 @@
         }, {});
     });
 
+    const memberReferenceId = (member, index = 0) => {
+        const year = String(member?.service || "").match(/\b(?:19|20)(\d{2})\s*[-–—]/)?.[1];
+        const parts = String(member?.name || "").trim().normalize("NFKD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .split(/\s+/)
+            .map(part => part.replace(/[^a-z0-9]/gi, "").toLocaleLowerCase())
+            .filter(Boolean);
+        if (!year || !parts.length) return String(member?.id || `legacy-member-${index}`);
+        return `${year}${parts.at(-1)}${parts[0][0]}`;
+    };
+
     const readCache = () => {
         try {
             const record = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
@@ -158,9 +169,10 @@
             const members = [...data.members].sort((a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0));
             const fragment = document.createDocumentFragment();
 
-            members.forEach(member => {
+            members.forEach((member, index) => {
                 const article = document.createElement("article");
                 article.className = "member-card reveal visible";
+                article.id = memberReferenceId(member, index);
 
                 const details = document.createElement("div");
                 details.className = "member-details";
@@ -180,6 +192,11 @@
             });
 
             membersGrid.replaceChildren(fragment);
+
+            let referenceId = location.hash.slice(1);
+            try { referenceId = decodeURIComponent(referenceId); } catch (_) { /* Keep the readable reference. */ }
+            const referencedMember = referenceId ? document.getElementById(referenceId) : null;
+            referencedMember?.scrollIntoView({ block: "center" });
         };
 
         const cached = readCache();
