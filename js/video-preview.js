@@ -1,7 +1,7 @@
 "use strict";
 
 // Shared by the public gallery and admin uploader so repaired/new records use
-// the same first-frame recovery path. Only the compressed still is retained.
+// the same visible-frame recovery path. Only the compressed still is retained.
 (() => {
     function withTimeout(task, milliseconds) {
         let timer;
@@ -20,21 +20,56 @@
         });
     }
 
+    function isNearlyBlackFrame(source) {
+        const sample = document.createElement("canvas");
+        sample.width = 32;
+        sample.height = 32;
+        const context = sample.getContext("2d", { alpha: false, willReadFrequently: true });
+        if (!context) return false;
+        try {
+            context.drawImage(source, 0, 0, sample.width, sample.height);
+            const pixels = context.getImageData(0, 0, sample.width, sample.height).data;
+            let brightness = 0;
+            let visiblyLit = 0;
+            const total = pixels.length / 4;
+            for (let index = 0; index < pixels.length; index += 4) {
+                const red = pixels[index];
+                const green = pixels[index + 1];
+                const blue = pixels[index + 2];
+                brightness += red * 0.2126 + green * 0.7152 + blue * 0.0722;
+                if (Math.max(red, green, blue) > 38) visiblyLit += 1;
+            }
+            return brightness / total < 18 && visiblyLit / total < 0.03;
+        } catch (_) {
+            // Cross-origin restrictions can prevent pixel inspection. The
+            // normal canvas export below will still determine usability.
+            return false;
+        } finally {
+            sample.width = sample.height = 1;
+        }
+    }
+
     function captureFrame(source, options) {
         return new Promise((resolve, reject) => {
             const video = document.createElement("video");
             const objectUrl = source instanceof Blob ? URL.createObjectURL(source) : "";
             let settled = false;
             let capturing = false;
-            let timeout, poll, seekTimer;
-            const events = ["loadeddata", "seeked", "canplay", "progress", "loadedmetadata"];
+            let timeout, frameRequest, fallbackFrameTimer;
+            let targets = [];
+            let targetIndex = -1;
             const finish = (error, result) => {
                 if (settled) return;
                 settled = true;
                 window.clearTimeout(timeout);
-                window.clearTimeout(seekTimer);
-                window.clearInterval(poll);
-                events.forEach(event => video.removeEventListener(event, capture));
+                window.clearTimeout(fallbackFrameTimer);
+                if (frameRequest !== undefined && video.cancelVideoFrameCallback) {
+                    video.cancelVideoFrameCallback(frameRequest);
+                }
+                video.removeEventListener("loadedmetadata", beginSeeking);
+                video.removeEventListener("loadeddata", scheduleCapture);
+                video.removeEventListener("canplay", scheduleCapture);
+                video.removeEventListener("seeked", scheduleCapture);
                 video.removeEventListener("error", onError);
                 video.pause();
                 video.removeAttribute("src");
@@ -44,7 +79,19 @@
                 if (error) reject(error);
                 else resolve(result);
             };
-            const onError = () => finish(new Error("This browser could not decode the video's first frame."));
+            const onError = () => finish(new Error("This browser could not decode a video preview frame."));
+            const seekNext = () => {
+                targetIndex += 1;
+                capturing = false;
+                if (targetIndex >= targets.length) return;
+                const target = targets[targetIndex];
+                try {
+                    if (Math.abs(video.currentTime - target) < 0.01) scheduleCapture();
+                    else video.currentTime = target;
+                } catch (_) {
+                    scheduleCapture();
+                }
+            };
             const capture = async () => {
                 if (settled || capturing || video.readyState < 2 || video.seeking) return;
                 if (!video.videoWidth || !video.videoHeight) return;
@@ -60,11 +107,16 @@
                     context.imageSmoothingEnabled = true;
                     context.imageSmoothingQuality = "high";
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    if (isNearlyBlackFrame(canvas) && targetIndex + 1 < targets.length) {
+                        canvas.width = canvas.height = 1;
+                        seekNext();
+                        return;
+                    }
                     let blob = await canvasBlob(canvas, "image/webp", options.quality);
                     if (!blob?.size || blob.type !== "image/webp") {
                         blob = await canvasBlob(canvas, "image/jpeg", options.jpegQuality);
                     }
-                    if (!blob?.size) throw new Error("The first-frame preview could not be compressed.");
+                    if (!blob?.size) throw new Error("The video preview frame could not be compressed.");
                     finish(null, {
                         blob, width: canvas.width, height: canvas.height,
                         contentType: blob.type,
@@ -76,6 +128,29 @@
                     canvas.width = canvas.height = 1;
                 }
             };
+            const scheduleCapture = () => {
+                if (settled || capturing || targetIndex < 0 || video.readyState < 2 || video.seeking) return;
+                capturing = true;
+                const run = () => {
+                    capturing = false;
+                    capture();
+                };
+                if (video.requestVideoFrameCallback) frameRequest = video.requestVideoFrameCallback(run);
+                else fallbackFrameTimer = window.setTimeout(run, 140);
+            };
+            const beginSeeking = () => {
+                if (settled || targets.length) return;
+                const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+                const finalFrame = duration > 0 ? Math.max(0, duration - 0.05) : 0;
+                const candidates = duration > 0
+                    ? [1, Math.max(2, duration * 0.01), Math.max(4, duration * 0.025)]
+                    : [0];
+                targets = candidates
+                    .map((time) => Math.min(time, finalFrame))
+                    .filter((time, index, list) => index === 0 || Math.abs(time - list[index - 1]) > 0.05);
+                if (!targets.length) targets = [0];
+                seekNext();
+            };
             video.muted = true;
             video.defaultMuted = true;
             video.playsInline = true;
@@ -86,20 +161,16 @@
             // Keep a rendered element for browsers that defer detached media.
             video.style.cssText = "position:fixed;left:-10px;top:-10px;width:1px;height:1px;opacity:0;pointer-events:none";
             if (!objectUrl) video.crossOrigin = "anonymous";
-            events.forEach(event => video.addEventListener(event, capture));
+            video.addEventListener("loadedmetadata", beginSeeking);
+            video.addEventListener("loadeddata", scheduleCapture);
+            video.addEventListener("canplay", scheduleCapture);
+            video.addEventListener("seeked", scheduleCapture);
             video.addEventListener("error", onError);
             document.body.appendChild(video);
-            timeout = window.setTimeout(() => finish(new Error("The first video frame took too long to decode.")), 25000);
-            // readyState polling also covers browsers that omit loadeddata.
-            poll = window.setInterval(capture, 200);
-            seekTimer = window.setTimeout(() => {
-                if (settled || capturing) return;
-                // Remain inside the opening frame; never seek to a later scene.
-                const target = Number.isFinite(video.duration) && video.duration > 0
-                    ? Math.min(0.001, video.duration / 2) : 0;
-                try { video.currentTime = target; } catch (_) { /* Continue waiting for decoded data. */ }
-                capture();
-            }, 1500);
+            timeout = window.setTimeout(
+                () => finish(new Error("A visible video frame took too long to decode.")),
+                Math.max(25000, Number(options.timeout) || 0)
+            );
             video.src = objectUrl || String(source || "");
             video.load();
         });
@@ -142,5 +213,5 @@
         return captureFrame(blob, options);
     }
 
-    window.KMCVideoPreview = { capture };
+    window.KMCVideoPreview = { capture, isNearlyBlackFrame };
 })();

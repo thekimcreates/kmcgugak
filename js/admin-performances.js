@@ -582,9 +582,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    async function createExistingGalleryThumbnail(item) {
+    async function createExistingGalleryThumbnail(item, { ignoreSavedPreview = false } = {}) {
         const savedPreview = item.thumbnailUrl || item.thumbnailURL || item.thumbUrl || item.previewUrl || "";
-        if (savedPreview) {
+        if (savedPreview && !ignoreSavedPreview) {
             try {
                 return await createImageThumbnail(savedPreview);
             } catch (error) {
@@ -666,7 +666,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ]).finally(() => window.clearTimeout(timer));
     }
 
-    function usableInlinePreview(value) {
+    function usableInlinePreview(value, rejectBlack = false) {
         if (!/^data:image\/(webp|jpeg|png);base64,/i.test(value || "")) return Promise.resolve(false);
         return new Promise(resolve => {
             const image = new Image();
@@ -677,7 +677,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 resolve(valid);
             };
             const timer = window.setTimeout(() => finish(false), 5000);
-            image.onload = () => finish(image.naturalWidth > 0 && image.naturalHeight > 0);
+            image.onload = () => {
+                const valid = image.naturalWidth > 0 && image.naturalHeight > 0;
+                const black = valid && rejectBlack && window.KMCVideoPreview?.isNearlyBlackFrame?.(image);
+                finish(valid && !black);
+            };
             image.onerror = () => finish(false);
             image.src = value;
         });
@@ -703,12 +707,16 @@ document.addEventListener("DOMContentLoaded", () => {
             jobs.sort((a, b) => Number(isVideoFile(a.item)) - Number(isVideoFile(b.item)));
             for (const { record, item } of jobs) {
                 try {
-                    if (await usableInlinePreview(item.thumbnailDataUrl)) continue;
-                    const thumbnail = await previewRepairTimeout(() => createExistingGalleryThumbnail(item), isVideoFile(item) ? 180000 : 90000);
+                    const videoItem = isVideoFile(item);
+                    if (await usableInlinePreview(item.thumbnailDataUrl, videoItem)) continue;
+                    const thumbnail = await previewRepairTimeout(
+                        () => createExistingGalleryThumbnail(item, { ignoreSavedPreview: videoItem }),
+                        videoItem ? 180000 : 90000
+                    );
                     // Save the compact image directly. An optional Storage upload
                     // must not block repairing the preview that the public reads.
                     const thumbnailDataUrl = await previewRepairTimeout(() => createInlineGalleryThumbnail(thumbnail));
-                    if (!await usableInlinePreview(thumbnailDataUrl)) throw new Error("The generated preview could not be decoded.");
+                    if (!await usableInlinePreview(thumbnailDataUrl, videoItem)) throw new Error("The generated preview could not be decoded.");
                     const fields = { thumbnailDataUrl, thumbnailWidth: thumbnail.width || 0, thumbnailHeight: thumbnail.height || 0 };
                     const reference = db.collection("performances").doc(record.id);
                     const didSave = await previewRepairTimeout(() => db.runTransaction(async transaction => {
