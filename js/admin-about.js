@@ -68,6 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function populate(data) {
     current = window.KMCSiteInformation.normalize(data);
+    window.KMCHistoryEditor.populate(current.aboutHistory, () => setDirty());
     document.getElementById("contact-label").value = current.footer.contactLabel;
     document.getElementById("contact-email").value = current.footer.contactEmail;
     document.getElementById("copyright-text").value = current.footer.copyrightText;
@@ -281,6 +282,9 @@ document.addEventListener("DOMContentLoaded", () => {
       setDirty();
       return setStatus("Each public link needs a label and a valid https, http, or mailto address.", "error");
     }
+    const historyError = window.KMCHistoryEditor.validate();
+    if (historyError) { setDirty(); return setStatus(historyError, "error"); }
+    const aboutHistory = window.KMCHistoryEditor.read();
     showSaving();
     try {
       const [circleLogoUrl, fullLogoUrl] = await Promise.all([
@@ -299,6 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
           showLogo: document.getElementById("show-footer-logo").checked
         },
         publicPage,
+        aboutHistory,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedBy: auth.currentUser?.uid || ""
       };

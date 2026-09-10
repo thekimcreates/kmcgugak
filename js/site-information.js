@@ -49,6 +49,7 @@
     const footer = data.footer || {};
     const publicPage = data.publicPage || {};
     return {
+      aboutHistory: data.aboutHistory ?? data.aboutHistoryPreview ?? window.KMCHistoryDefaults ?? null,
       circleLogoUrl: String(data.circleLogoUrl || ""),
       fullLogoUrl: String(data.fullLogoUrl || ""),
       footer: {

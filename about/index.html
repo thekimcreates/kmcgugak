@@ -4,12 +4,12 @@
     <base href="/">
     <link rel="icon" type="image/png" href="/assets/logo/kmcoc-circlelogo.png">
     <link rel="apple-touch-icon" href="/assets/logo/kmcoc-circlelogo.png">
-    <link rel="canonical" href="https://kmcoc.org/about/">
+    <link rel="canonical" href="https://kmcgugak.org/about/">
     <script>if (/\/index\.html$/.test(location.pathname)) history.replaceState(null, "", location.pathname.replace(/index\.html$/, "") + location.search + location.hash);</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About | KMC Gugak</title>
-    <meta name="description" content="About KMC Samulnori, opportunities, announcements, and helpful resources.">
+    <meta name="description" content="Learn about KMC Gugak, our mission, and our history.">
     <meta name="theme-color" content="#ffffff">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,6 +22,8 @@
     <link rel="stylesheet" href="css/about.css?v=20260829info2">
 <link rel="stylesheet" href="css/site-polish.css?v=20260906ui1">
 <script src="js/logo-cache.js?v=20260906ui1"></script>
+<link rel="stylesheet" href="css/history.css?v=20260910history1">
+<script defer src="js/history-data.js?v=20260910history1"></script>
 </head>
 <body class="information-page">
 <header class="navbar" id="navbar">
@@ -41,15 +43,16 @@
         <a href="/">Home</a><a href="/about/" class="active" aria-current="page">About</a><a href="/performances/">Performances</a><a href="/arrangements/">Arrangements</a><a href="/team/">Team</a><a href="/login">Login</a>
     </div>
 </header>
-<main id="information-page" hidden>
+<main id="information-page">
     <section class="information-hero section" aria-labelledby="information-page-title">
-        <div class="section-container"><header class="information-page-header reveal"><h1 id="information-page-title">About</h1></header></div>
+        <div class="section-container"><header class="information-page-header"><h1 id="information-page-title">About Our Team</h1><p id="history-mission"></p></header></div>
     </section>
-    <section class="information-content section" aria-label="About KMC Samulnori and useful links"><div class="section-container"><div id="information-sections" class="information-sections" aria-live="polite"></div></div></section>
+    <section class="information-content section" aria-label="About KMC Samulnori and useful links"><div class="section-container"><div class="history-timeline"><div class="history-track" aria-hidden="true"><div class="history-fill"></div></div><ol id="history-items"></ol></div><div id="information-sections" class="information-sections" aria-live="polite"></div></div></section>
 </main>
 <footer class="footer"><div class="footer-container"><div class="footer-logo"><img data-site-logo="full" data-logo-fallback="assets/logo/kmc-gugak-animated-source.png" alt="KMC Samulnori Logo"></div><div class="footer-contact"><p>Contact: <a href="mailto:kmc-samulnori@gmail.com">kmc-samulnori@gmail.com</a></p></div><div class="footer-bottom"><p>© 2026 KMC Samulnori. All Rights Reserved.</p></div></div></footer>
 <script defer src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
-<script defer src="js/public.bundle.js?v=20260725p3e"></script><script defer src="js/site-information.js?v=20260906ui1"></script><script defer src="js/about-page.js?v=20260829info2"></script>
+<script defer src="js/public.bundle.js?v=20260725p3e"></script><script defer src="js/site-information.js?v=20260910history1"></script><script defer src="js/about-page.js?v=20260829info2"></script>
+<script defer src="js/history.js?v=20260910history1"></script>
 </body>
 </html>
