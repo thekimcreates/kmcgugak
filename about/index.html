@@ -22,8 +22,8 @@
     <link rel="stylesheet" href="css/about.css?v=20260829info2">
 <link rel="stylesheet" href="css/site-polish.css?v=20260906ui1">
 <script src="js/logo-cache.js?v=20260906ui1"></script>
-<link rel="stylesheet" href="css/history.css?v=20260910history1">
-<script defer src="js/history-data.js?v=20260910history1"></script>
+<link rel="stylesheet" href="css/history.css?v=20260910history2">
+
 </head>
 <body class="information-page">
 <header class="navbar" id="navbar">
@@ -43,16 +43,16 @@
         <a href="/">Home</a><a href="/about/" class="active" aria-current="page">About</a><a href="/performances/">Performances</a><a href="/arrangements/">Arrangements</a><a href="/team/">Team</a><a href="/login">Login</a>
     </div>
 </header>
-<main id="information-page">
+<main id="information-page" aria-busy="true"><p id="history-load-status" class="history-load-status" role="status">Loading…</p><div id="history-content" hidden>
     <section class="information-hero section" aria-labelledby="information-page-title">
-        <div class="section-container"><header class="information-page-header"><h1 id="information-page-title">About Our Team</h1><p id="history-mission"></p></header></div>
+        <div class="section-container"><header class="information-page-header"><h1 id="information-page-title"></h1><p id="history-mission"></p></header></div>
     </section>
-    <section class="information-content section" aria-label="About KMC Samulnori and useful links"><div class="section-container"><div class="history-timeline"><div class="history-track" aria-hidden="true"><div class="history-fill"></div></div><ol id="history-items"></ol></div><div id="information-sections" class="information-sections" aria-live="polite"></div></div></section>
-</main>
+    <section class="information-content section" aria-label="About KMC Samulnori and useful links"><div class="section-container"><div class="history-timeline"><div class="history-track" aria-hidden="true"><div class="history-fill"></div></div><ol id="history-items"></ol></div></div></section>
+</div></main>
 <footer class="footer"><div class="footer-container"><div class="footer-logo"><img data-site-logo="full" data-logo-fallback="assets/logo/kmc-gugak-animated-source.png" alt="KMC Samulnori Logo"></div><div class="footer-contact"><p>Contact: <a href="mailto:kmc-samulnori@gmail.com">kmc-samulnori@gmail.com</a></p></div><div class="footer-bottom"><p>© 2026 KMC Samulnori. All Rights Reserved.</p></div></div></footer>
 <script defer src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
-<script defer src="js/public.bundle.js?v=20260725p3e"></script><script defer src="js/site-information.js?v=20260910history1"></script><script defer src="js/about-page.js?v=20260829info2"></script>
-<script defer src="js/history.js?v=20260910history1"></script>
+<script defer src="js/public.bundle.js?v=20260725p3e"></script><script defer src="js/site-information.js?v=20260910history2"></script>
+<script defer src="js/history.js?v=20260910history2"></script>
 </body>
 </html>

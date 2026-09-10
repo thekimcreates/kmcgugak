@@ -14,8 +14,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const saveBar = document.getElementById("information-save-bar");
   const saveMessage = document.getElementById("information-save-message");
   const revertButton = document.getElementById("revert-information");
-  const sectionsEditor = document.getElementById("information-sections-editor");
-  const addSection = document.getElementById("add-information-section");
   const redirect = () => location.replace("/login");
   let current = window.KMCSiteInformation?.fallback || {};
   let pending = { circle: null, full: null };
@@ -75,120 +73,9 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("footer-message").value = current.footer.message;
     document.getElementById("show-contact").checked = current.footer.showContact;
     document.getElementById("show-footer-logo").checked = current.footer.showLogo;
-    renderPublicPageEditor(current.publicPage.sections);
     setPreview("circle", current.circleLogoUrl || "/assets/logo/kmcoc-circlelogo.png");
     setPreview("full", current.fullLogoUrl || "../assets/logo/full.webp");
     updateFooterPreview();
-  }
-
-  function createField(labelText, control) {
-    const field = document.createElement("div");
-    field.className = "admin-field";
-    const label = document.createElement("label");
-    label.textContent = labelText;
-    field.append(label, control);
-    return field;
-  }
-
-  function createInput(className, value, placeholder, type = "text") {
-    const input = document.createElement("input");
-    input.type = type;
-    input.className = className;
-    input.value = value || "";
-    input.placeholder = placeholder;
-    return input;
-  }
-
-  function createButton(text, className) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = className;
-    button.textContent = text;
-    return button;
-  }
-
-  function renderPublicPageEditor(sections = []) {
-    sectionsEditor.replaceChildren();
-    sections.forEach((section, index) => {
-      const card = document.createElement("article");
-      card.className = "information-section-editor";
-
-      const header = document.createElement("div");
-      header.className = "information-section-editor-header";
-      const title = document.createElement("h3");
-      title.textContent = `Text Section ${index + 1}`;
-      const remove = createButton("Remove section", "admin-secondary-button information-remove-section");
-      remove.addEventListener("click", () => {
-        const next = readPublicPage().sections;
-        next.splice(index, 1);
-        renderPublicPageEditor(next);
-        setDirty();
-      });
-      header.append(title, remove);
-      card.append(header);
-
-      card.append(createField("Section Title", createInput("information-section-title", section.title, "e.g. Join the Rhythm")));
-      const text = document.createElement("textarea");
-      text.className = "information-section-text";
-      text.rows = 4;
-      text.maxLength = 1200;
-      text.placeholder = "Write what visitors should know.";
-      text.value = section.text || "";
-      card.append(createField("Text", text));
-
-      const linksHeading = document.createElement("p");
-      linksHeading.className = "information-links-label";
-      linksHeading.textContent = "Links";
-      card.append(linksHeading);
-      const links = document.createElement("div");
-      links.className = "information-admin-links";
-      (section.links || []).forEach(link => addLinkRow(links, link));
-      card.append(links);
-      const addLink = createButton("+ Add Link", "admin-secondary-button information-add-link");
-      addLink.addEventListener("click", () => {
-        addLinkRow(links, {});
-        setDirty();
-      });
-      card.append(addLink);
-      sectionsEditor.append(card);
-    });
-  }
-
-  function addLinkRow(container, link) {
-    const row = document.createElement("div");
-    row.className = "information-admin-link-row";
-    row.append(
-      createInput("information-link-label", link.label, "Link label"),
-      createInput("information-link-url", link.url, "https://… or mailto:…", "url")
-    );
-    const remove = createButton("Remove", "admin-link-remove");
-    remove.addEventListener("click", () => {
-      row.remove();
-      setDirty();
-    });
-    row.append(remove);
-    container.append(row);
-  }
-
-  function readPublicPage() {
-    return {
-      sections: [...sectionsEditor.querySelectorAll(".information-section-editor")].map(card => ({
-        title: card.querySelector(".information-section-title").value.trim(),
-        text: card.querySelector(".information-section-text").value.trim(),
-        links: [...card.querySelectorAll(".information-admin-link-row")].map(row => ({
-          label: row.querySelector(".information-link-label").value.trim(),
-          url: row.querySelector(".information-link-url").value.trim()
-        })).filter(link => link.label || link.url)
-      })).filter(section => section.title || section.text || section.links.length)
-    };
-  }
-
-  function isSafePublicLink(url) {
-    try {
-      return ["https:", "http:", "mailto:"].includes(new URL(url, location.href).protocol);
-    } catch (_) {
-      return false;
-    }
   }
 
   function setPreview(kind, url) {
@@ -262,12 +149,6 @@ document.addEventListener("DOMContentLoaded", () => {
     updateFooterPreview();
     setDirty();
   }));
-  addSection.addEventListener("click", () => {
-    const sections = readPublicPage().sections;
-    sections.push({ title: "", text: "", links: [] });
-    renderPublicPageEditor(sections);
-    setDirty();
-  });
   revertButton.addEventListener("click", () => window.location.reload());
   form.addEventListener("submit", async event => {
     event.preventDefault();
@@ -275,12 +156,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
       setDirty();
       return setStatus("Enter a valid contact email address.", "error");
-    }
-    const publicPage = readPublicPage();
-    const invalidLink = publicPage.sections.flatMap(section => section.links).find(link => !link.label || !isSafePublicLink(link.url));
-    if (invalidLink) {
-      setDirty();
-      return setStatus("Each public link needs a label and a valid https, http, or mailto address.", "error");
     }
     const historyError = window.KMCHistoryEditor.validate();
     if (historyError) { setDirty(); return setStatus(historyError, "error"); }
@@ -302,7 +177,6 @@ document.addEventListener("DOMContentLoaded", () => {
           showContact: document.getElementById("show-contact").checked,
           showLogo: document.getElementById("show-footer-logo").checked
         },
-        publicPage,
         aboutHistory,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedBy: auth.currentUser?.uid || ""

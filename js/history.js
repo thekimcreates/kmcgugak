@@ -6,6 +6,9 @@
  function element(tag,cls,text){const e=document.createElement(tag);e.className=cls;if(text!==undefined)e.textContent=text;return e;}
  function render(data){
   observer?.disconnect();
+  document.querySelector("#history-content").hidden=false;
+  document.querySelector("#history-load-status").hidden=true;
+  document.querySelector("#information-page").setAttribute("aria-busy","false");
   document.querySelector('#information-page-title').textContent=data.title ?? '';
   document.querySelector('#history-mission').textContent=data.mission ?? '';
   items.replaceChildren();
@@ -29,11 +32,26 @@
  function update(){const r=document.querySelector('.history-track').getBoundingClientRect(),line=innerHeight*.65;fill.style.transform=`scaleY(${Math.max(0,Math.min(1,(line-r.top)/(r.height||1)))})`;[...items.children].forEach(x=>x.classList.toggle('is-active',x.getBoundingClientRect().top<line));queued=false;}
  function schedule(){if(!queued){queued=true;requestAnimationFrame(update);}}
  addEventListener('scroll',schedule,{passive:true});addEventListener('resize',schedule);
- render(window.KMCHistoryDefaults);
- function applyInformation(data){render(data?.aboutHistory || window.KMCHistoryDefaults);}
- document.addEventListener('kmc:site-information-loaded',event=>applyInformation(event.detail));
- const loaded=window.KMCSiteInformation?.getLastLoaded?.();
- if(loaded)applyInformation(loaded);
+
+ const page=document.querySelector('#information-page'),status=document.querySelector('#history-load-status');
+ let hasContent=false,unsubscribe=null;
+ function showStatus(message){if(hasContent)return;status.textContent=message;page.setAttribute('aria-busy','false');}
  const db=window.kmcFirebase?.db;
- if(db){const unsubscribe=db.collection('siteContent').doc('information').onSnapshot(snap=>{const data=snap.data();applyInformation({aboutHistory:data?.aboutHistory ?? data?.aboutHistoryPreview});},error=>console.warn('History refresh unavailable:',error.code));addEventListener('pagehide',unsubscribe,{once:true});}
+ if(!db){showStatus('Unable to load this page. Please reload to try again.');return;}
+ const timeout=setTimeout(()=>showStatus('Still connecting. Please check your connection or reload to try again.'),12000);
+ function start(){
+  unsubscribe=db.collection('siteContent').doc('information').onSnapshot({includeMetadataChanges:true},snap=>{
+   const data=snap.data();
+   const history=data?.aboutHistory ?? data?.aboutHistoryPreview;
+   if(history && typeof history==='object' && Array.isArray(history.items)){
+    clearTimeout(timeout);hasContent=true;render(history);
+   }else if(!snap.metadata.fromCache){
+    clearTimeout(timeout);hasContent=false;document.querySelector('#history-content').hidden=true;status.hidden=false;
+    showStatus('About our team will be available soon.');
+   }
+  },error=>{clearTimeout(timeout);showStatus('Unable to load this page. Please reload to try again.');console.warn('History refresh unavailable:',error.code);});
+ }
+ start();
+ addEventListener('pagehide',()=>{unsubscribe?.();unsubscribe=null;clearTimeout(timeout);});
+ addEventListener('pageshow',event=>{if(event.persisted&&!unsubscribe)start();});
 })();

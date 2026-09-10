@@ -3,3 +3,5 @@
 @media(prefers-reduced-motion:reduce){.history-motion .history-copy{opacity:1;transform:none;transition:none}.history-dot{transition:none}}
 
 .information-page .history-timeline{margin-bottom:80px}
+
+#history-content[hidden]{display:none}.history-load-status{min-height:50vh;padding:190px max(24px,calc((100vw - 1200px)/2)) 60px;color:var(--secondary-text)}
