@@ -2804,3 +2804,6 @@ body[data-admin-page="team"] .admin-dashboard-main,
     #gallery-zip-status.is-error { color: #ff98ac; }
     #gallery-zip-progress, #gallery-zip-progress::-webkit-progress-bar { background: #3b363a; }
 }
+
+body[data-admin-page="dashboard"] .admin-dashboard-card{background:#fff}
+@media(prefers-color-scheme:dark){body[data-admin-page="dashboard"] .admin-dashboard-card{background:#000}}

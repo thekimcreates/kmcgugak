@@ -37,7 +37,7 @@
     <link rel="stylesheet" href="css/style.css?v=20260906polish2">
     <link rel="stylesheet" href="css/performances.css?v=20260906polish2">
 <link rel="stylesheet" href="css/site-polish.css?v=20260906ui1">
-    <link rel="stylesheet" href="css/gallery-upload.css?v=20260906ui1">
+    <link rel="stylesheet" href="css/gallery-upload.css?v=20260912gallery1">
 <script src="js/logo-cache.js?v=20260906ui1"></script>
 </head>
 
@@ -110,15 +110,15 @@
         <h1 id="upload-workspace-title" tabindex="-1"></h1>
         <div class="upload-work-area">
             <div class="upload-grid-wrap">
-                <p id="upload-empty" class="upload-empty">Add photos and videos to get started.</p>
-                <div id="upload-grid" class="upload-grid" aria-label="Files selected for uploading"></div>
+                <p id="upload-empty" class="upload-empty">No photos or videos in this gallery yet.</p>
+                <div id="upload-grid" class="upload-grid" aria-label="Performance gallery"></div>
             </div>
             <div class="upload-controls">
                 <div id="upload-drop" class="upload-drop">
                     <input id="upload-files" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,video/mp4,video/quicktime,video/webm,.mov,.m4v" multiple hidden>
                     <button id="upload-browse" type="button" class="upload-button">Browse</button>
                     <p id="upload-drop-help">or drag and drop here</p>
-                    <div id="upload-drop-indicator" class="upload-drop-indicator" hidden role="status" aria-live="polite"></div>
+                    <div id="upload-pending" class="upload-pending" aria-label="Files awaiting submission"></div><div id="upload-drop-indicator" class="upload-drop-indicator" hidden role="status" aria-live="polite"></div>
                 </div>
                 <div class="upload-submit-panel">
                     <div id="upload-progress-wrap" class="upload-progress" hidden>
@@ -127,15 +127,15 @@
                         <p id="upload-bytes">0 B of 0 B</p>
                     </div>
                     <p id="upload-status" class="upload-status" role="status" aria-live="polite"></p>
-                    <button id="upload-submit" type="button" class="upload-button upload-submit" disabled>Submit</button>
+                    <button id="upload-undo-deletions" type="button" class="upload-button is-secondary" hidden>Undo deletions</button><button id="upload-submit" type="button" class="upload-button upload-submit" disabled>Submit</button>
                 </div>
             </div>
         </div>
     </section>
 </main>
 <dialog id="upload-confirm" class="upload-dialog" aria-labelledby="upload-confirm-title" aria-describedby="upload-confirm-message">
-    <h2 id="upload-confirm-title">Are you sure you want to upload these files?</h2>
-    <p id="upload-confirm-message">You will not be able to remove these files after submitting.</p>
+    <h2 id="upload-confirm-title">Publish these changes?</h2>
+    <p id="upload-confirm-message">Selected files will be added and pending deletions will be removed from this performance’s gallery.</p>
     <div class="upload-dialog-actions">
         <button id="upload-no" type="button" class="upload-button is-secondary" autofocus>No</button>
         <button id="upload-yes" type="button" class="upload-button">Yes</button>
@@ -170,6 +170,6 @@
 <script defer src="js/video-preview.js?v=20260908visibleframe1"></script>
 <script defer src="js/gallery-upload-api.js?v=20260906upload1"></script>
 <script defer src="js/performance-format.js?v=20260906polish2"></script>
-<script defer src="js/gallery-upload.js?v=20260906ui1"></script>
+<script defer src="js/gallery-upload.js?v=20260912gallery1"></script>
 </body>
 </html>

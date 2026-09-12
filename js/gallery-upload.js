@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const spinner = '<span class="upload-spinner" aria-hidden="true"></span>';
     const check = '<svg class="upload-check" viewBox="0 0 32 32" aria-hidden="true"><path d="m7 17 6 6 13-14"/></svg>';
     let records = [], selected = null, session = null, files = [];
+    let gallery = [], deletions = new Set();
     let routeVersion = 0, verifying = false, preparing = false, submitting = false, frozen = false, completed = false;
     let dropTimer = 0, returnTimer = 0, dragDepth = 0, verifyController = null;
 
@@ -84,7 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     function release(entry) { if (entry.previewUrl) URL.revokeObjectURL(entry.previewUrl); }
     function resetFiles() {
-        files.forEach(release); files = []; session = null;
+        files.forEach(release); files = []; session = null; gallery = []; deletions.clear(); renderGallery();
         frozen = completed = false;
         clearTimeout(dropTimer); clearTimeout(returnTimer);
         $("upload-progress-wrap").hidden = true;
@@ -158,7 +159,8 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const result = await api.request("verify", { performanceId: selected.id, code }, { signal: verifyController.signal });
             if (version !== routeVersion) return;
-            session = result.token;
+            if (!result.galleryEditing || !Array.isArray(result.galleryItems)) throw new Error("The gallery editing service needs to be updated. Please contact the administrator.");
+            session = result.token; gallery = result.galleryItems; renderGallery();
             codeStatus("Opening page…", "success");
             await new Promise(resolve => setTimeout(resolve, 700));
             if (version === routeVersion) await unlock();
@@ -213,8 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
         $("upload-browse").disabled = preparing || submitting || frozen;
     }
     function renderFiles() {
-        $("upload-empty").hidden = files.length > 0;
-        $("upload-grid").replaceChildren(...files.map(entry => {
+        $("upload-pending").replaceChildren(...files.map(entry => {
             const tile = element("figure", "upload-tile");
             if (entry.previewUrl) {
                 const image = element("img"); image.src = entry.previewUrl; image.alt = entry.name; tile.append(image);
@@ -222,11 +223,70 @@ document.addEventListener("DOMContentLoaded", () => {
             if (entry.type === "video") tile.append(element("span", "performance-gallery-video-badge", durationLabel(entry.duration)));
             const remove = element("button", "upload-remove", "×"); remove.type = "button";
             remove.setAttribute("aria-label", `Remove ${entry.name}`); remove.disabled = frozen || submitting || preparing;
-            remove.addEventListener("click", () => { release(entry); files = files.filter(item => item.id !== entry.id); renderFiles(); status(files.length ? `${files.length} files ready to submit.` : ""); });
+            remove.addEventListener("click", () => { release(entry); files = files.filter(item => item.id !== entry.id); renderFiles(); pendingStatus(); });
             tile.append(remove); return tile;
         }));
-        $("upload-submit").disabled = !files.length || preparing || submitting || completed;
+        $("upload-submit").disabled = (!files.length && !deletions.size) || preparing || submitting || completed;
+        $("upload-undo-deletions").hidden = !deletions.size;
+        $("upload-undo-deletions").disabled = frozen || submitting || preparing || completed;
+        $("upload-grid").querySelectorAll(".upload-gallery-delete").forEach(button => { button.disabled = frozen || submitting || preparing || completed; });
         $("upload-browse").disabled = preparing || submitting || frozen;
+    }
+    function pendingStatus() { status(files.length || deletions.size ? "Changes are not published yet" : ""); }
+    const safeMedia = url => { try { return ["https:", "http:"].includes(new URL(url).protocol); } catch (_) { return false; } };
+    function renderGallery() {
+        const visible = gallery.filter(item => !deletions.has(item.deletionKey));
+        $("upload-empty").hidden = visible.length > 0;
+        $("upload-grid").replaceChildren(...visible.map(item => {
+            const tile = element("figure", "upload-tile upload-published-tile"); tile.dataset.key = item.deletionKey;
+            const thumbnail = item.thumbnailUrl || (item.type !== "video" ? item.url : "");
+            if (safeMedia(thumbnail)) { const image = element("img"); image.src = thumbnail; image.alt = item.name || "Performance gallery image"; image.loading = "lazy"; image.onerror = () => image.replaceWith(element("span", "upload-preview-fallback", "Preview unavailable")); tile.append(image); }
+            else if (item.type === "video" && safeMedia(item.url)) { const video = element("video"); video.src = item.url; video.preload = "metadata"; video.muted = true; video.playsInline = true; video.controls = true; tile.append(video); }
+            else tile.append(element("span", "upload-preview-fallback", "Preview unavailable"));
+            if (item.type === "video") tile.append(element("span", "performance-gallery-video-badge", durationLabel(item.duration)));
+            const remove = element("button", "upload-remove upload-gallery-delete", "×"); remove.type = "button";
+            remove.setAttribute("aria-label", `Delete ${item.name || (item.type === "video" ? "video" : "image")}`);
+            remove.disabled = frozen || submitting || preparing || completed;
+            remove.onclick = event => {
+                if (frozen || submitting || preparing || completed) return;
+                // Pointer clicks require either Alt key; keyboard activation remains accessible.
+                if (event.detail !== 0 && !event.altKey) return;
+                deletions.add(item.deletionKey); renderGallery(); renderFiles(); pendingStatus();
+            };
+            tile.append(remove); return tile;
+        }));
+    }
+    function setAlt(active) { $("upload-grid").classList.toggle("is-alt-held", active); }
+    document.addEventListener("keydown", event => setAlt(event.altKey));
+    document.addEventListener("keyup", event => setAlt(event.altKey));
+    $("upload-grid").addEventListener("pointermove", event => setAlt(event.altKey));
+    window.addEventListener("blur", () => setAlt(false));
+    document.addEventListener("visibilitychange", () => { if (document.hidden) setAlt(false); });
+    $("upload-undo-deletions").onclick = () => { if (frozen || submitting || preparing || completed) return; deletions.clear(); renderGallery(); renderFiles(); pendingStatus(); };
+    async function publishIntoGrid(result) {
+        const pending = [...$("upload-pending").children];
+        const before = files.map((entry, index) => ({ entry, rect: pending[index]?.getBoundingClientRect() }));
+        const previousKeys = new Set(gallery.map(item => item.deletionKey));
+        gallery = result.galleryItems; deletions.clear(); renderGallery();
+        const added = [...$("upload-grid").children].filter(tile => !previousKeys.has(tile.dataset.key));
+        const animations = [];
+        if (added.length) {
+            const wrap = $("upload-grid").parentElement;
+            wrap.scrollTop = Math.max(0, added[0].offsetTop - $("upload-grid").offsetTop);
+        }
+        if (!reducedMotion.matches) added.forEach((tile, index) => {
+            const from = before[index]?.rect, to = tile.getBoundingClientRect();
+            if (!tile.animate || to.bottom < 0 || to.top > innerHeight) return;
+            const ghost = tile.cloneNode(true); ghost.removeAttribute("data-key"); ghost.querySelectorAll("button, video").forEach(node => node.remove());
+            ghost.setAttribute("aria-hidden", "true"); ghost.classList.add("upload-flight");
+            Object.assign(ghost.style, {position:"fixed",left:`${to.left}px`,top:`${to.top}px`,width:`${to.width}px`,height:`${to.height}px`,zIndex:"10000",pointerEvents:"none",margin:"0"});
+            document.body.append(ghost); tile.style.opacity = "0";
+            const dx = from ? from.left - to.left : 0, dy = from ? from.top - to.top : 30;
+            const animation = ghost.animate([{ transform: `translate(${dx}px, ${dy}px) scale(.65)`, opacity: .25 }, { transform: "none", opacity: 1 }], { duration: 650, delay: Math.min(index * 45, 300), fill:"both", easing: "cubic-bezier(.22,1,.36,1)" });
+            animations.push(animation.finished.catch(() => {}).finally(() => { ghost.remove(); tile.style.opacity = ""; }));
+        });
+        files.forEach(release); files = []; renderFiles(); setDropState("idle");
+        await Promise.all(animations);
     }
     function videoDuration(file) {
         return new Promise(resolve => {
@@ -279,7 +339,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         } finally {
             preparing = false; renderFiles(); setDropState(added ? "ready" : "idle");
-            status(errors.length ? errors.join(" ") : `${files.length} files ready to submit.`, errors.length > 0);
+            status(errors.length ? errors.join(" ") : (files.length || deletions.size ? "Changes are not published yet" : ""), errors.length > 0);
         }
     }
     $("upload-browse").addEventListener("click", () => $("upload-files").click());
@@ -298,7 +358,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderFiles(); $("upload-submit").focus({ preventScroll: true });
     }
     $("upload-submit").addEventListener("click", () => {
-        if (!files.length || preparing || submitting || completed) return;
+        if ((!files.length && !deletions.size) || preparing || submitting || completed) return;
         if (frozen) { submit(); return; }
         $("upload-submit").innerHTML = spinner; $("upload-submit").setAttribute("aria-label", "Awaiting upload confirmation");
         $("upload-submit").setAttribute("aria-busy", "true");
@@ -317,7 +377,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const progress = (key, value, done = false) => {
             transferred.set(key, value);
             const loaded = [...transferred.values()].reduce((a, b) => a + b, 0);
-            const percent = done ? 100 : Math.min(99, Math.floor(loaded / total * 100));
+            const percent = done ? 100 : Math.min(99, Math.floor(loaded / (total || 1) * 100));
             $("upload-progress").value = percent;
             $("upload-percent").textContent = `${percent}%`;
             $("upload-bytes").textContent = `${bytes(loaded)} of ${bytes(total)}`;
@@ -327,7 +387,9 @@ document.addEventListener("DOMContentLoaded", () => {
             status("Preparing upload…");
             const manifest = files.map(entry => ({ id: entry.id, name: entry.name, size: entry.blob.size, mimeType: entry.mimeType, duration: entry.duration,
                 thumbnail: entry.thumbnail ? { size: entry.thumbnail.blob.size, mimeType: entry.thumbnail.blob.type } : null }));
-            const prepared = await api.request("prepare", { token: session, files: manifest });
+            const prepared = await api.request("prepare", { token: session, files: manifest, deletions: [...deletions] });
+            if (!prepared.galleryEditing) throw new Error("The gallery editing service needs to be updated. Please contact the administrator.");
+            let result = prepared;
             if (!prepared.complete) {
                 let next = 0, done = 0, failed = null;
                 async function worker() {
@@ -347,10 +409,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 await Promise.all(Array.from({ length: Math.min(3, files.length) }, worker));
                 if (failed) throw failed;
                 status("Adding files to the gallery…");
-                await api.request("finish", { token: session });
+                result = await api.request("finish", { token: session });
             }
             progress("complete", total - [...transferred.values()].reduce((a, b) => a + b, 0), true);
-            completed = true; status("Upload complete.");
+            if (!result.complete || !Array.isArray(result.galleryItems)) throw new Error("Changes could not be confirmed. Press Submit to retry.");
+            completed = true; status("Changes published.");
+            await publishIntoGrid(result);
             $("upload-submit").innerHTML = check; $("upload-submit").classList.add("is-complete");
             $("upload-submit").setAttribute("aria-label", "Upload complete");
             $("upload-submit").removeAttribute("aria-busy");
@@ -364,7 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     window.addEventListener("hashchange", route);
     window.addEventListener("beforeunload", event => {
-        if ((files.length || preparing || submitting) && !completed) { event.preventDefault(); event.returnValue = ""; }
+        if ((files.length || deletions.size || preparing || submitting) && !completed) { event.preventDefault(); event.returnValue = ""; }
     });
     window.addEventListener("pagehide", event => { if (!event.persisted) files.forEach(release); });
     (async () => {

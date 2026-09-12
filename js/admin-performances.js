@@ -874,7 +874,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function trapModalFocus(event) {
-        if (!modalDialog || modal.hidden) return;
+        if (!modalDialog || modal.hidden || event.defaultPrevented || document.querySelector("dialog[open]")) return;
 
         if (event.key === "Escape") {
             event.preventDefault();
@@ -1305,9 +1305,12 @@ document.addEventListener("DOMContentLoaded", () => {
     modalClose?.addEventListener("click", closePerformanceModal);
     modal?.addEventListener("keydown", trapModalFocus);
 
-    // Keep backdrop clicks from closing the editor.
-    modal?.querySelector(".performance-modal-backdrop")?.addEventListener("click", (event) => {
-        event.preventDefault();
+    // Dismiss the editor from its blurred backdrop.
+    modal?.querySelector(".performance-modal-backdrop")?.addEventListener("click", closePerformanceModal);
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && !event.defaultPrevented && !modal?.hidden && !document.querySelector("dialog[open]")) {
+            event.preventDefault(); closePerformanceModal();
+        }
     });
 
     cancelButton.addEventListener("click", () => {

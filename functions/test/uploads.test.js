@@ -148,3 +148,40 @@ test("media signature check accepts WebP and rejects HTML despite image MIME", (
     assert.equal(matchesMedia(Buffer.from("RIFF0000WEBPsample"), "image/webp"), true);
     assert.equal(matchesMedia(Buffer.from("<html>not an image</html>"), "image/jpeg"), false);
 });
+
+test("code unlock returns gallery and deletion-only batch waits for finish", async () => {
+    const f=fixture(); f.docs.set("performances/a",{galleryItems:[{id:"one",url:"https://example.com/one.jpg"},{id:"two",url:"https://example.com/two.mp4",type:"video"}]});
+    const code=await f.service.ensureCode("a");
+    const result=await f.service.verify({performanceId:"a",code},"deletion-test");
+    assert.equal(result.galleryEditing,true); assert.equal(result.galleryItems.length,2);
+    const deletions=[result.galleryItems[0].deletionKey];
+    const prepared=await f.service.prepare({token:result.token,files:[],deletions});
+    assert.deepEqual(prepared.files,[]);assert.equal(f.docs.get("performances/a").galleryItems.length,2);
+    const finished=await f.service.finish({token:result.token});
+    assert.equal(finished.galleryItems.length,1);assert.equal(finished.galleryItems[0].id,"two");
+    await f.service.finish({token:result.token});assert.equal(f.docs.get("performances/a").galleryItems.length,1);
+});
+test("deletions are scoped to the code's performance and locked on prepare", async () => {
+    const f=fixture();
+    for(const id of ["a","b"])f.docs.set(`performances/${id}`,{galleryItems:[{id:"same",url:"https://example.com/shared.jpg"}]});
+    const a=await f.service.verify({performanceId:"a",code:await f.service.ensureCode("a")},"a");
+    const b=await f.service.verify({performanceId:"b",code:await f.service.ensureCode("b")},"b");
+    await assert.rejects(f.service.prepare({token:a.token,files:[],deletions:[b.galleryItems[0].deletionKey]}),{code:"invalid-deletions"});
+    await assert.rejects(f.service.prepare({token:"f".repeat(64),files:[],deletions:[a.galleryItems[0].deletionKey]}),{code:"invalid-session"});
+    await f.service.prepare({token:a.token,files:[],deletions:[a.galleryItems[0].deletionKey]});
+    await assert.rejects(f.service.prepare({token:a.token,files:[f.file],deletions:[]}),{code:"batch-locked"});
+    f.advance(5*3600000);await assert.rejects(f.service.finish({token:a.token}),{code:"session-expired"});
+    assert.equal(f.docs.get("performances/a").galleryItems.length,1);
+});
+test("mixed edits commit atomically and preserve concurrently added gallery files", async () => {
+    const f=fixture();f.docs.set("performances/a",{galleryItems:[{id:"old",url:"https://example.com/old.jpg"}]});
+    const access=await f.service.verify({performanceId:"a",code:await f.service.ensureCode("a")},"mixed");
+    const prep=await f.service.prepare({token:access.token,files:[f.file],deletions:[access.galleryItems[0].deletionKey]});
+    await assert.rejects(f.service.finish({token:access.token}),{code:"missing-file"});
+    assert.equal(f.docs.get("performances/a").galleryItems[0].id,"old");
+    f.docs.get("performances/a").galleryItems.push({id:"other",url:"https://example.com/other.jpg"});
+    f.stage(prep.files[0].media);
+    await Promise.all([f.service.finish({token:access.token}),f.service.finish({token:access.token})]);
+    const result=f.docs.get("performances/a").galleryItems;
+    assert.equal(result.length,2);assert.equal(result[0].id,"other");assert.equal(result[1].name,f.file.name);
+});

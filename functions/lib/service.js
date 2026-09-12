@@ -102,6 +102,14 @@ function createUploadService({ db, bucket, serverTimestamp, now = Date.now }) {
             refs.forEach((ref, index) => tx.set(ref, next[index]));
         });
     }
+    // Opaque identity bound to this performance and this exact gallery entry.
+    const deletionKey = (id, item) => hash(JSON.stringify([id, item.id || "", item.path || "", item.url || ""]));
+    const galleryFor = (id, data) => (Array.isArray(data?.galleryItems) ? data.galleryItems : []).map(item => ({ ...item, deletionKey: deletionKey(id, item) }));
+    async function completedResult(id) {
+        const show = await performance(id).get();
+        if (!show.exists) fail("not-found", "This performance is no longer available.", 404);
+        return { complete: true, performanceId: id, galleryItems: galleryFor(id, show.data()), galleryEditing: true };
+    }
     async function verify({ performanceId: id, code }, ip) {
         id = performanceId(id);
         await throttle(ip, id);
@@ -113,7 +121,7 @@ function createUploadService({ db, bucket, serverTimestamp, now = Date.now }) {
         }
         const token = randomBytes(32).toString("hex");
         await records("sessions").doc(hash(token)).set({ performanceId: id, state: "unlocked", createdAt: now(), expiresAt: now() + SESSION_MS });
-        return { token, expiresAt: now() + SESSION_MS };
+        return { token, expiresAt: now() + SESSION_MS, galleryItems: galleryFor(id, show.data()), galleryEditing: true };
     }
     function mediaPath(sessionId, file, thumbnail = false) {
         const info = thumbnail ? file.thumbnail : file;
@@ -127,28 +135,35 @@ function createUploadService({ db, bucket, serverTimestamp, now = Date.now }) {
         });
         return policy;
     }
-    async function prepare({ token, files: input }) {
-        const files = validateManifest(input);
+    async function prepare({ token, files: input, deletions = [] }) {
+        if (!Array.isArray(deletions) || deletions.length > 2000 || deletions.some(key => typeof key !== "string" || !/^[a-f0-9]{64}$/.test(key)) || new Set(deletions).size !== deletions.length) fail("invalid-deletions", "The deletion list is invalid.");
+        deletions = [...deletions].sort();
+        const files = Array.isArray(input) && input.length === 0 && deletions.length ? [] : validateManifest(input);
         const { ref } = await getSession(token);
         const session = await db.runTransaction(async tx => {
             const snapshot = await tx.get(ref), state = snapshot.data();
             if (state.state === "complete") return state;
             if (state.expiresAt <= now()) fail("session-expired", "Your upload session expired. Reload and enter the code again.", 401);
             if (state.files && JSON.stringify(state.files) !== JSON.stringify(files)) fail("batch-locked", "This submission is already locked. Retry the original files.", 409);
+            if (state.files && JSON.stringify(state.deletions || []) !== JSON.stringify(deletions)) fail("batch-locked", "This submission is already locked. Retry the original changes.", 409);
             const show = await tx.get(performance(state.performanceId));
             if (!show.exists) fail("not-found", "This performance is no longer available.", 404);
-            const next = { ...state, files, state: "prepared" };
+            if (!state.files) {
+                const allowed = new Set(galleryFor(state.performanceId, show.data()).map(item => item.deletionKey));
+                if (deletions.some(key => !allowed.has(key))) fail("invalid-deletions", "A selected file is no longer in this performance. Reload the gallery and try again.", 409);
+            }
+            const next = { ...state, files, deletions, state: "prepared" };
             tx.set(ref, next);
             return next;
         });
-        if (session.state === "complete") return { complete: true };
+        if (session.state === "complete") return completedResult(session.performanceId);
         const expires = Math.min(now() + 60 * 60 * 1000, session.expiresAt);
         const policies = await parallelMap(files, 4, async file => ({
             id: file.id,
             media: await signedPolicy(mediaPath(ref.id, file), file, expires),
             thumbnail: file.thumbnail ? await signedPolicy(mediaPath(ref.id, file, true), file.thumbnail, expires) : null
         }));
-        return { complete: false, files: policies };
+        return { complete: false, files: policies, galleryEditing: true };
     }
     async function publishAsset(sessionId, session, file, thumbnail = false) {
         const info = thumbnail ? file.thumbnail : file;
@@ -184,8 +199,8 @@ function createUploadService({ db, bucket, serverTimestamp, now = Date.now }) {
     }
     async function finish({ token }) {
         const { ref, session } = await getSession(token);
-        if (session.state === "complete") return { complete: true, performanceId: session.performanceId };
-        if (!session.files?.length) fail("empty-batch", "Select files before submitting.", 409);
+        if (session.state === "complete") return completedResult(session.performanceId);
+        if (session.state !== "prepared" || (!session.files?.length && !session.deletions?.length)) fail("empty-batch", "Select files before submitting.", 409);
         if (!(await performance(session.performanceId).get()).exists) fail("not-found", "This performance is no longer available.", 404);
         const published = await parallelMap(session.files, 3, async file => {
             const media = await publishAsset(ref.id, session, file);
@@ -199,7 +214,8 @@ function createUploadService({ db, bucket, serverTimestamp, now = Date.now }) {
             if (currentSession.data()?.state === "complete") return;
             if (!currentPerformance.exists) fail("not-found", "This performance is no longer available.", 404);
             if (currentSession.data().expiresAt <= now()) fail("session-expired", "Your upload session expired. Please start again.", 401);
-            const existing = currentPerformance.data().galleryItems || [];
+            const removed = new Set(currentSession.data().deletions || []);
+            const existing = (currentPerformance.data().galleryItems || []).filter(item => !removed.has(deletionKey(session.performanceId, item)));
             const paths = new Set(existing.map(item => item.path || item.url));
             const galleryItems = [...existing, ...published.filter(item => !paths.has(item.path))];
             // Firestore has a 1 MiB document limit. Leave space for field encoding and future edits.
@@ -207,7 +223,7 @@ function createUploadService({ db, bucket, serverTimestamp, now = Date.now }) {
             tx.update(performance(session.performanceId), { galleryItems, updatedAt: serverTimestamp() });
             tx.update(ref, { state: "complete", completedAt: now(), expiresAt: now() + 7 * 86400000 });
         });
-        return { complete: true, performanceId: session.performanceId };
+        return completedResult(session.performanceId);
     }
     async function cleanup() {
         // Bound each daily job; leftover expired records will be collected on the next run.
