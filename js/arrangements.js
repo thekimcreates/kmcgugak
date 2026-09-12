@@ -184,7 +184,7 @@
             panel.setAttribute("aria-hidden", "true");
             panel.tabIndex = -1;
 
-            panel.innerHTML = '<div class="arrangement-detail-shell"><button class="arrangement-close" type="button" aria-label="Close details"><span></span><span></span></button><div class="arrangement-detail-scroll"><header class="arrangement-detail-hero"><img decoding="async"><div class="arrangement-detail-overlay"><h2></h2><p></p></div><span class="arrangement-detail-arrow" aria-hidden="true">↓</span></header><div class="arrangement-detail-content"><h3>Instruments Used</h3><div class="instrument-list"></div></div></div></div>';
+            panel.innerHTML = '<div class="arrangement-detail-shell"><button class="arrangement-close" type="button" aria-label="Close details"><span></span><span></span></button><div class="arrangement-detail-scroll"><header class="arrangement-detail-hero"><img decoding="async"><div class="arrangement-detail-overlay"><h2></h2><p></p></div><span class="arrangement-detail-arrow" aria-hidden="true">↓</span></header><div class="arrangement-detail-content"><div class="arrangement-description"></div><h3>Instruments Used</h3><div class="instrument-list"></div></div></div></div>';
 
             const heroImage = panel.querySelector(".arrangement-detail-hero img");
             heroImage.src = arrangement.photoUrl || "";
@@ -192,6 +192,14 @@
             panel.querySelector("h2").textContent = arrangement.name || "Arrangement";
             panel.querySelector(".arrangement-detail-overlay p").textContent = arrangement.koreanName || "";
 
+            const description = window.KMCArrangementDescription?.(arrangement) || "";
+            const descriptionBox = panel.querySelector(".arrangement-description");
+            descriptionBox.hidden = !description.trim();
+            description.split(/\n\s*\n/).filter(text => text.trim()).forEach(text => {
+                const paragraph = document.createElement("p");
+                paragraph.textContent = text;
+                descriptionBox.appendChild(paragraph);
+            });
             const instrumentList = panel.querySelector(".instrument-list");
             const rows = [...arrangement.instruments]
                 .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));

@@ -311,6 +311,7 @@ document.addEventListener("DOMContentLoaded", () => {
     q("arrangement-editor-title").textContent = id ? "Edit Arrangement" : "Add Arrangement";
     q("arrangement-id").value = item.id;
     q("arrangement-name").value = item.name;
+    q("arrangement-description").value = window.KMCArrangementDescription(item);
     q("arrangement-korean").value = item.koreanName || "";
     q("arrangement-photo-existing").value = item.photoUrl || "";
     q("arrangement-photo-path").value = item.photoPath || "";
@@ -335,7 +336,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (uploaded) ({ photoUrl, photoPath } = uploaded);
       if (!photoUrl) throw new Error("Please upload an arrangement photo.");
       const instruments = [...q("selected-instruments").children].map((row, order) => ({ instrumentId: row.dataset.instrumentId, order }));
-      const record = { id, name: q("arrangement-name").value.trim(), koreanName: q("arrangement-korean").value.trim(), photoUrl, photoPath, order: old?.order ?? state.arrangements.length, instruments };
+      const record = { ...old, description: q("arrangement-description").value.trim(), id, name: q("arrangement-name").value.trim(), koreanName: q("arrangement-korean").value.trim(), photoUrl, photoPath, order: old?.order ?? state.arrangements.length, instruments };
       state.arrangements = old ? state.arrangements.map(item => item.id === oldId ? record : item) : [...state.arrangements, record];
       normalizeArrangementOrder();
       if (uploaded && old?.photoPath && old.photoPath !== uploaded.photoPath) storagePathsToDelete.add(old.photoPath);
@@ -368,7 +369,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const uploaded = await upload(file, "instrument-photos", id, q("instrument-status"));
     if (uploaded) ({ photoUrl, photoPath } = uploaded);
     if (!photoUrl) throw new Error("Please upload an instrument photo.");
-    const record = { id, name: name.trim(), koreanName: koreanName.trim(), photoUrl, photoPath };
+    const record = { ...old, description: q("arrangement-description").value.trim(), id, name: name.trim(), koreanName: koreanName.trim(), photoUrl, photoPath };
     state.instruments = oldId ? state.instruments.map(item => item.id === oldId ? record : item) : [...state.instruments, record];
     if (uploaded && existingPath && existingPath !== uploaded.photoPath) storagePathsToDelete.add(existingPath);
     return uploaded;
@@ -473,6 +474,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const snapshot = await docRef.get();
       if (snapshot.exists) state = { arrangements: [], instruments: [], ...snapshot.data() };
       else await saveState();
+      const needsDescriptions = state.arrangements.some(item => typeof item.description !== "string" && window.KMCArrangementDescription(item));
+      state.arrangements = state.arrangements.map(item => ({ ...item, description: window.KMCArrangementDescription(item) }));
+      if (needsDescriptions) setDirty();
       state.arrangements.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       normalizeArrangementOrder();
       renderList();

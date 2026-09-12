@@ -800,3 +800,24 @@ body.arrangement-open .navbar {
 @media (max-width: 900px) {
     .arrangements-page .arrangements-list { grid-template-columns: 1fr; gap: 25px; }
 }
+
+/* Description and compact instrument tiles within the expanded arrangement. */
+.arrangement-detail-content .arrangement-description{max-width:850px;margin:0 0 44px;color:var(--text)}
+.arrangement-description[hidden]{display:none}
+.arrangement-description p{margin:0 0 18px;font-size:1.0625rem;line-height:1.8;white-space:pre-line;overflow-wrap:anywhere}
+.arrangement-description p:last-child{margin-bottom:0}
+.arrangement-detail-content > h3{font-size:clamp(1.5rem,3vw,2rem);margin-bottom:22px;letter-spacing:-.035em}
+.arrangement-detail-content .instrument-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.arrangement-detail-content .instrument-row{display:flex;align-items:center;gap:18px;min-width:0;padding:16px;border:1px solid rgba(127,127,127,.2);border-radius:20px;background:var(--surface);margin:0}
+.arrangement-detail-content .instrument-image{flex:0 0 88px;width:88px;height:88px;min-height:0;aspect-ratio:1;border-radius:12px;overflow:hidden}
+.arrangement-detail-content .instrument-image img{width:100%;height:100%;object-fit:contain;padding:6px;transform:none}
+.arrangement-detail-content .instrument-copy{min-width:0}
+.arrangement-detail-content .instrument-copy h4{font-size:clamp(1.0625rem,1.8vw,1.4rem);line-height:1.3;letter-spacing:-.025em;overflow-wrap:anywhere}
+.arrangement-detail-content .instrument-copy h4 span{display:block;margin:5px 0 0;font-size:.9375rem;font-weight:500;line-height:1.4}
+@media(max-width:640px){
+ .arrangement-detail-content .instrument-list{grid-template-columns:1fr;gap:10px}
+ .arrangement-detail-content .instrument-row{gap:14px;padding:12px;border-radius:16px}
+ .arrangement-detail-content .instrument-image{flex-basis:64px;width:64px;height:64px}
+ .arrangement-detail-content .arrangement-description{margin-bottom:32px}
+ .arrangement-description p{font-size:1rem;line-height:1.75}
+}
