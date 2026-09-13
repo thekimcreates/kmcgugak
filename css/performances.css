@@ -1742,3 +1742,12 @@ body.performance-gallery-viewer-open {
 
 /* Smooth the small preview consistently for photos and videos. */
 .kmc-soft-preview{image-rendering:auto!important;filter:blur(1.25px);transform:scale(1.025)}
+
+/* Only the detail-card preview is limited; the full gallery keeps every file. */
+.performance-gallery-preview > .performance-gallery-preview-tile:nth-child(n+17) { display:none; }
+@media (max-width:900px) {
+    .performance-gallery-preview > .performance-gallery-preview-tile:nth-child(n+9) { display:none; }
+}
+@media (max-width:520px) {
+    .performance-gallery-preview > .performance-gallery-preview-tile:nth-child(n+5) { display:none; }
+}

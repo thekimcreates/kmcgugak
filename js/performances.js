@@ -932,22 +932,23 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    async function selectGalleryItem(index) {
+    async function selectGalleryItem(index, swipeTransform = null) {
         const items = galleryItemsFor(galleryRecord);
         if (galleryTransitioning || index < 0 || index >= items.length || index === activeGalleryIndex) return;
+        const direction = index > activeGalleryIndex ? 1 : -1;
         galleryTransitioning = true;
         galleryViewerMedia.getAnimations?.().forEach(animation => animation.cancel());
         galleryViewerMedia.style.opacity = "1";
         galleryViewerMedia.style.transform = "none";
         const outgoing = galleryViewerMedia.animate?.([
-            { opacity: 1, transform: "scale(1)" },
-            { opacity: 0, transform: "scale(.985)" }
+            { opacity: 1, transform: swipeTransform || "scale(1)" },
+            { opacity: 0, transform: swipeTransform ? `translateX(${-direction * 100}%)` : "scale(.985)" }
         ], { duration: 120, easing: "ease-out", fill: "forwards" });
         try { await outgoing?.finished; } catch (_) { /* Selection changed quickly. */ }
         outgoing?.cancel();
         renderExpandedGalleryItem(index);
         const incoming = galleryViewerMedia.animate?.([
-            { opacity: 0, transform: "scale(1.015)" },
+            { opacity: 0, transform: swipeTransform ? `translateX(${direction * 100}%)` : "scale(1.015)" },
             { opacity: 1, transform: "scale(1)" }
         ], { duration: 220, easing: "cubic-bezier(.22,1,.36,1)" });
         try { await incoming?.finished; } catch (_) { /* Selection changed quickly. */ }
@@ -1563,7 +1564,9 @@ document.addEventListener("DOMContentLoaded", () => {
     galleryModal?.querySelector(".performance-gallery-modal-backdrop")?.addEventListener("click", closeGallery);
     window.KMCGallerySwipe.attach(galleryViewerMedia, {
         enabled: () => !galleryViewer.hidden && !galleryTransitioning && !isGalleryVideoFullscreen(),
-        change: direction => selectGalleryItem(activeGalleryIndex + direction)
+        canChange: direction => activeGalleryIndex + direction >= 0 && activeGalleryIndex + direction < galleryItemsFor(galleryRecord).length,
+        change: (direction, transform) => selectGalleryItem(activeGalleryIndex + direction, transform),
+        close: closeGalleryViewer
     });
     galleryViewerClose?.addEventListener("click", closeGalleryViewer);
     galleryViewerPrevious?.addEventListener("click", () => selectGalleryItem(activeGalleryIndex - 1));
