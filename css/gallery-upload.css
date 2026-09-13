@@ -157,3 +157,6 @@
 @media(prefers-reduced-motion:reduce){.upload-published-tile .upload-gallery-delete{transition:none}}
 
 .upload-pending{max-height:300px;overflow:auto;padding:4px}.upload-flight{will-change:transform,opacity}
+
+/* Smooth the small preview consistently for photos and videos. */
+.kmc-soft-preview{image-rendering:auto!important;filter:blur(1.25px);transform:scale(1.025)}

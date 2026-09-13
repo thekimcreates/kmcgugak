@@ -4,7 +4,7 @@
         if (!value) return "Date unavailable";
         const parsed = new Date(`${value}T12:00:00`);
         if (Number.isNaN(parsed.getTime())) return String(value);
-        return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(parsed);
+        return new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(parsed);
     }
     function time(record) {
         if (record.timeTbd) return "Time TBD";

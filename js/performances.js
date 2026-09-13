@@ -578,6 +578,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const image = document.createElement("img");
                 image.alt = "";
                 image.decoding = "async";
+                image.classList.add("kmc-soft-preview");
                 // The image is decoded before it replaces the placeholder, so
                 // it must not be lazy-loaded while detached from the document.
                 image.loading = "eager";
@@ -598,6 +599,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const image = document.createElement("img");
                 image.alt = "";
                 image.decoding = "async";
+                image.classList.add("kmc-soft-preview");
                 image.loading = "eager";
                 if (className) image.classList.add(className);
                 try {

@@ -1750,3 +1750,6 @@ body.performance-gallery-viewer-open {
 }
 
 #performance-year-popover { left: auto; right: 0; width: max(100%, 180px); max-width: calc(100vw - 48px); }
+
+/* Smooth the small preview consistently for photos and videos. */
+.kmc-soft-preview{image-rendering:auto!important;filter:blur(1.25px);transform:scale(1.025)}

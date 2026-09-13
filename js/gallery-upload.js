@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const locationLabel = record => record.locationTbd ? "Location TBD" : record.locationName || record.location || "Location unavailable";
     const galleryDateLabel = value => {
         const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
-        return match ? `${Number(match[2])}/${match[3]}/${match[1]}` : "Date unavailable";
+        return match ? `${Number(match[2])}/${Number(match[3])}/${match[1]}` : "Date unavailable";
     };
     const dateLabel = value => window.KMCPerformanceFormat.date(value);
     const timeLabel = record => window.KMCPerformanceFormat.time(record);
@@ -218,7 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
         $("upload-pending").replaceChildren(...files.map(entry => {
             const tile = element("figure", "upload-tile");
             if (entry.previewUrl) {
-                const image = element("img"); image.src = entry.previewUrl; image.alt = entry.name; tile.append(image);
+                const image = element("img", "kmc-soft-preview"); image.src = entry.previewUrl; image.alt = entry.name; tile.append(image);
             } else tile.append(element("span", "upload-preview-fallback", "Preview unavailable"));
             if (entry.type === "video") tile.append(element("span", "performance-gallery-video-badge", durationLabel(entry.duration)));
             const remove = element("button", "upload-remove", "×"); remove.type = "button";
@@ -235,14 +235,12 @@ document.addEventListener("DOMContentLoaded", () => {
     function pendingStatus() { status(files.length || deletions.size ? "Changes are not published yet" : ""); }
     const safeMedia = url => { try { return ["https:", "http:"].includes(new URL(url).protocol); } catch (_) { return false; } };
     function renderGallery() {
+        window.KMCUploadPreviews.reset();
         const visible = gallery.filter(item => !deletions.has(item.deletionKey));
         $("upload-empty").hidden = visible.length > 0;
         $("upload-grid").replaceChildren(...visible.map(item => {
             const tile = element("figure", "upload-tile upload-published-tile"); tile.dataset.key = item.deletionKey;
-            const thumbnail = item.thumbnailUrl || (item.type !== "video" ? item.url : "");
-            if (safeMedia(thumbnail)) { const image = element("img"); image.src = thumbnail; image.alt = item.name || "Performance gallery image"; image.loading = "lazy"; image.onerror = () => image.replaceWith(element("span", "upload-preview-fallback", "Preview unavailable")); tile.append(image); }
-            else if (item.type === "video" && safeMedia(item.url)) { const video = element("video"); video.src = item.url; video.preload = "metadata"; video.muted = true; video.playsInline = true; video.controls = true; tile.append(video); }
-            else tile.append(element("span", "upload-preview-fallback", "Preview unavailable"));
+            window.KMCUploadPreviews.attach(tile, item);
             if (item.type === "video") tile.append(element("span", "performance-gallery-video-badge", durationLabel(item.duration)));
             const remove = element("button", "upload-remove upload-gallery-delete", "×"); remove.type = "button";
             remove.setAttribute("aria-label", `Delete ${item.name || (item.type === "video" ? "video" : "image")}`);
