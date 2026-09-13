@@ -765,6 +765,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!item) return;
         stopActiveGalleryVideo();
         activeGalleryIndex = index;
+        overlayHistory.updateIndex(index);
         const loadToken = activeGalleryLoadToken;
         const openingReady = galleryOpeningReady;
         galleryViewerMedia.replaceChildren();
@@ -909,6 +910,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const item = galleryItemsFor(galleryRecord)[index];
         if (!item || galleryTransitioning) return;
         if (!galleryViewer.hidden) return selectGalleryItem(index);
+        overlayHistory.enter(3, galleryRecord.id, index);
         galleryTransitioning = true;
         galleryOpeningReady = new Promise(resolve => { finishGalleryOpening = resolve; });
         galleryViewer.hidden = false;
@@ -973,8 +975,9 @@ document.addEventListener("DOMContentLoaded", () => {
         galleryTransitioning = false;
     }
 
-    async function closeGalleryViewer(fromTouch = false) {
+    async function closeGalleryViewer(fromTouch = false, historyDriven = false) {
         if (galleryViewer.hidden || galleryTransitioning) return;
+        if (!historyDriven && overlayHistory.leave(2, fromTouch === true)) return;
         galleryTransitioning = true;
         // A late image decode must not replace the outgoing thumbnail proxy.
         activeGalleryLoadToken += 1;
@@ -1010,6 +1013,7 @@ document.addEventListener("DOMContentLoaded", () => {
         galleryRecord = record;
         const items = galleryItemsFor(record);
         if (!items.length) return;
+        overlayHistory.enter(2, record.id);
         hideGalleryViewerImmediately();
         galleryModalTitle.textContent = `${getLocation(record)} ${formatGalleryDate(record.date)} - Gallery`;
         galleryGrid.replaceChildren(...items.map((item, index) => {
@@ -1025,15 +1029,17 @@ document.addEventListener("DOMContentLoaded", () => {
         else galleryModalClose.focus({ preventScroll: true });
     }
 
-    function closeGallery() {
+    function closeGallery(historyDriven = false) {
         if (!galleryModal || galleryModal.hidden) return;
+        if (historyDriven !== true && overlayHistory.leave(1)) return;
         hideGalleryViewerImmediately();
         galleryModal.classList.remove("is-open");
         document.body.classList.remove("performance-gallery-open");
-        window.setTimeout(() => {
+        return new Promise(resolve => window.setTimeout(() => {
             galleryModal.hidden = true;
             galleryModal.setAttribute("aria-hidden", "true");
-        }, 180);
+            resolve();
+        }, 180));
     }
 
     function createExternalLink(link) {
@@ -1107,17 +1113,19 @@ document.addEventListener("DOMContentLoaded", () => {
             detailClose.focus({ preventScroll: true });
         });
 
+        overlayHistory.enter(1, record.id);
         updateReferenceUrl(record.id);
     }
 
-    function closeDetail({ restoreHash = true } = {}) {
+    function closeDetail({ restoreHash = true, historyDriven = false } = {}) {
         if (!detail || detail.hidden) return;
+        if (!historyDriven && overlayHistory.leave(0)) return;
 
         detail.classList.remove("is-open");
         detail.classList.add("is-closing");
         document.body.classList.remove("performance-detail-open");
 
-        closeTimer = window.setTimeout(() => {
+        return new Promise(resolve => { closeTimer = window.setTimeout(() => {
             detail.hidden = true;
             detail.classList.remove("is-closing");
             detail.setAttribute("aria-hidden", "true");
@@ -1126,7 +1134,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (restoreHash && location.hash) updateReferenceUrl("");
 
             lastFocusedElement?.focus?.({ preventScroll: true });
-        }, 300);
+            resolve();
+        }, 300); });
     }
 
     function trapDetailFocus(event) {
@@ -1225,13 +1234,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateReferenceUrl(performanceId = activeRecord?.id || "") {
+        if (overlayHistory.busy()) return;
         const parts = selectedArrangementSlugs().map((slug) => `arrangement=${slug}`);
         selectedMemberIds().forEach((id) => parts.push(`user=${id}`));
         if (yearFilter.value && yearFilter.value !== "all") parts.push(`year=${yearFilter.value}`);
 
         let url = parts.length ? `/performances?${parts.join(",")}/` : "/performances/";
         if (performanceId) url += `#${encodeURIComponent(performanceId)}`;
-        history.replaceState(null, "", url);
+        history.replaceState(history.state, "", url);
     }
 
     function getRecordArrangements(record) {
@@ -1543,7 +1553,42 @@ document.addEventListener("DOMContentLoaded", () => {
         count.textContent = "Unable to load performances";
     }
 
+    const overlayHistory = window.KMCPerformanceHistory(async (target, fromTouch) => {
+        // Back presses during a slide/open animation wait for that animation,
+        // then close layers in order. Newer Back targets are queued by the controller.
+        while (galleryTransitioning) await waitForAnimationFrames();
+        const changingRecord = activeRecord && activeRecord.id !== target.id;
+        if (!galleryViewer.hidden && (target.depth < 3 || changingRecord)) {
+            await closeGalleryViewer(fromTouch, true);
+        }
+        if (!galleryModal.hidden && (target.depth < 2 || changingRecord)) {
+            await closeGallery(true);
+        }
+        if (!detail.hidden && (target.depth < 1 || changingRecord)) {
+            await closeDetail({ restoreHash: false, historyDriven: true });
+        }
+        if (target.depth < 1) return;
+        let record = activeRecord?.id === target.id ? activeRecord : records.find(item => item.id === target.id);
+        if (!record) return;
+        if (detail.hidden || activeRecord?.id !== target.id) openDetail(record);
+        if (target.depth >= 2 && galleryModal.hidden) {
+            if (record._summaryOnly) record = await window.KMCPerformanceList.detail(record);
+            openGallery(record);
+        }
+        if (target.depth >= 3) {
+            const index = Math.min(target.index || 0, galleryItemsFor(galleryRecord).length - 1);
+            if (index >= 0) {
+                if (galleryViewer.hidden) await openGalleryViewer(index);
+                else if (activeGalleryIndex !== index) await selectGalleryItem(index);
+            }
+        }
+    });
+
     function openHashRecord() {
+        if (overlayHistory.current()) {
+            void overlayHistory.restore();
+            return;
+        }
         const rawId = location.hash.slice(1);
         if (!rawId) return;
 
@@ -1567,6 +1612,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         window.setTimeout(() => {
+            if (readReferenceHash() !== id || overlayHistory.busy()) return;
             openDetail(record, matchingCard || null);
         }, matchingCard ? 360 : 0);
     }
@@ -1758,7 +1804,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    window.addEventListener("hashchange", openHashRecord);
+    window.addEventListener("hashchange", () => {
+        // popstate already owns managed overlay navigation.
+        if (!overlayHistory.current()) openHashRecord();
+    });
 
     function refreshControlsAndCards({ reopenHash = false } = {}) {
         const selectedYear = yearFilter.value || "all";
