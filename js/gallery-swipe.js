@@ -1,10 +1,10 @@
 "use strict";
 window.KMCGallerySwipe = {
-    attach(surface, { enabled, change, close, canChange = () => true }) {
+    attach(surface, { enabled, change, close, prepare = () => {}, progress = () => {}, cleanup = () => {}, canChange = () => true }) {
         if (!surface) return;
         let start = null, settling = false, suppressClickUntil = 0;
         const zoomed = () => (window.visualViewport?.scale || 1) > 1.05;
-        const reset = () => { surface.style.transform = "none"; };
+        const reset = () => { surface.style.transform = "none"; cleanup(); progress(0); };
         const settle = async callback => {
             settling = true;
             const animation = surface.animate?.([
@@ -42,9 +42,11 @@ window.KMCGallerySwipe = {
             if (!start.axis) return;
             if (event.cancelable) event.preventDefault();
             start.dx = dx; start.dy = dy;
-            const x = start.axis === 'x' ? dx * (canChange(dx < 0 ? 1 : -1) ? 1 : .25) : 0;
+            if (start.axis === 'x') prepare(dx < 0 ? 1 : -1);
+            const x = start.axis === 'x' ? dx * (canChange(dx < 0 ? 1 : -1) ? 1 : .25) : dx;
             const y = start.axis === 'y' ? Math.max(0, dy) : 0;
             surface.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+            if (start.axis === "y") progress(Math.hypot(x, y));
         }, { passive: false });
         surface.addEventListener("touchend", event => {
             if (!start) return;
@@ -55,8 +57,9 @@ window.KMCGallerySwipe = {
             suppressClickUntil = Date.now() + 500;
             const dx = point.clientX - gesture.x, dy = point.clientY - gesture.y;
             if (gesture.axis === 'y') {
-                // Return fully to the fitted position before the existing zoom-to-tile close.
-                settle(dy >= 90 ? close : null);
+                // Keep the release transform: the shared close animation starts here.
+                if (dy >= 90) close();
+                else settle();
             } else {
                 const direction = dx < 0 ? 1 : -1;
                 if (Math.abs(dx) >= 60 && canChange(direction)) {

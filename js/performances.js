@@ -564,7 +564,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function attachGalleryThumbnail(container, item, className = "") {
+    function attachGalleryThumbnail(container, item, className = "", allowLegacy = true) {
         const placeholder = createGalleryPlaceholder(item);
         if (className) placeholder.classList.add(className);
         container.appendChild(placeholder);
@@ -589,7 +589,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     console.warn("Unable to display a gallery thumbnail candidate:", error);
                 }
             }
-            const fallback = await resolveLegacyGalleryPreview(item);
+            const fallback = allowLegacy ? await resolveLegacyGalleryPreview(item) : "";
             if (fallback) {
                 const image = document.createElement("img");
                 image.alt = "";
@@ -700,6 +700,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function hideGalleryViewerImmediately() {
+        clearTimeout(filmstripLoadTimer);
+        filmstripTouchMode = false;
+        filmstripFingerDown = false;
+        cleanupTouchPreview();
+        galleryViewerMedia.style.transform = "none";
+        fadeTouchControls(0);
         stopActiveGalleryVideo();
         finishGalleryOpening?.();
         finishGalleryOpening = null;
@@ -731,14 +737,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function updateFilmstripSelection(index, smooth = true) {
+    function updateFilmstripSelection(index, smooth = true, center = true) {
         galleryFilmstripTrack.querySelectorAll(".performance-gallery-filmstrip-item").forEach((button) => {
             const selected = Number(button.dataset.galleryIndex) === index;
             button.classList.toggle("is-selected", selected);
             button.setAttribute("aria-selected", String(selected));
             button.tabIndex = selected ? 0 : -1;
         });
-        centerFilmstripItem(index, smooth);
+        if (center) centerFilmstripItem(index, smooth);
     }
 
     function renderGalleryFilmstrip() {
@@ -746,12 +752,15 @@ document.addEventListener("DOMContentLoaded", () => {
         galleryFilmstripTrack.replaceChildren(...items.map((item, index) => {
             const button = createGalleryTile(item, "performance-gallery-filmstrip-item", index);
             button.setAttribute("role", "option");
-            button.addEventListener("click", () => selectGalleryItem(index));
+            button.addEventListener("click", (event) => {
+                if (filmstripTouchMode) { event.preventDefault(); return; }
+                selectGalleryItem(index);
+            });
             return button;
         }));
     }
 
-    function renderExpandedGalleryItem(index) {
+    function renderExpandedGalleryItem(index, { previewOnly = false, center = true, previewImage = null } = {}) {
         const item = galleryItemsFor(galleryRecord)[index];
         if (!item) return;
         stopActiveGalleryVideo();
@@ -761,10 +770,14 @@ document.addEventListener("DOMContentLoaded", () => {
         galleryViewerMedia.replaceChildren();
         const previewLayer = document.createElement("div");
         previewLayer.className = "performance-gallery-progressive-preview";
-        const thumbnail = attachGalleryThumbnail(previewLayer, item);
+        const thumbnail = previewImage
+            ? { promise: Promise.resolve(previewImage.currentSrc || previewImage.src) }
+            : attachGalleryThumbnail(previewLayer, item, "", !previewOnly);
+        if (previewImage) previewLayer.appendChild(previewImage);
         galleryViewerMedia.appendChild(previewLayer);
         updateViewerNavigation();
-        updateFilmstripSelection(index, galleryViewer.classList.contains("is-content-visible"));
+        updateFilmstripSelection(index, galleryViewer.classList.contains("is-content-visible"), center);
+        if (previewOnly) return;
 
         if (!isGalleryVideo(item)) {
             const image = document.createElement("img");
@@ -933,6 +946,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function selectGalleryItem(index, swipeTransform = null) {
+        filmstripTouchMode = false;
+        clearTimeout(filmstripLoadTimer);
         const items = galleryItemsFor(galleryRecord);
         if (galleryTransitioning || index < 0 || index >= items.length || index === activeGalleryIndex) return;
         const direction = index > activeGalleryIndex ? 1 : -1;
@@ -958,24 +973,24 @@ document.addEventListener("DOMContentLoaded", () => {
         galleryTransitioning = false;
     }
 
-    async function closeGalleryViewer() {
+    async function closeGalleryViewer(fromTouch = false) {
         if (galleryViewer.hidden || galleryTransitioning) return;
         galleryTransitioning = true;
         // A late image decode must not replace the outgoing thumbnail proxy.
         activeGalleryLoadToken += 1;
         galleryViewerMedia.getAnimations?.().forEach(animation => animation.cancel());
         galleryViewerMedia.style.opacity = "1";
-        galleryViewerMedia.style.transform = "none";
+        if (fromTouch !== true) galleryViewerMedia.style.transform = "none";
         activeGalleryVideo?.pause();
         const item = galleryItemsFor(galleryRecord)[activeGalleryIndex];
         const tile = galleryGrid.querySelector(`[data-gallery-index="${activeGalleryIndex}"]`);
         tile?.scrollIntoView({ block: "nearest", inline: "nearest" });
-        await waitForAnimationFrames(2);
+        if (fromTouch !== true) await waitForAnimationFrames(2);
 
         let proxy = null;
         try {
             const target = tile?.getBoundingClientRect();
-            const shared = createSharedMediaProxy(tile, item);
+            const shared = createSharedMediaProxy(fromTouch === true ? galleryViewerMedia : tile, item);
             proxy = shared.proxy;
             const from = containedMediaRect(item, shared.sourceVisual);
             galleryViewer.classList.add("is-shared-transitioning");
@@ -1562,11 +1577,120 @@ document.addEventListener("DOMContentLoaded", () => {
     galleryShowAll?.addEventListener("click", () => activeRecord && openGallery(activeRecord));
     galleryModalClose?.addEventListener("click", closeGallery);
     galleryModal?.querySelector(".performance-gallery-modal-backdrop")?.addEventListener("click", closeGallery);
+    let touchPreview = null, touchPreviewDirection = 0;
+    let filmstripTouchMode = false, filmstripFingerDown = false, filmstripLoadTimer = null;
+    let filmstripCandidate = -1, filmstripReady = false;
+    function cleanupTouchPreview() {
+        touchPreview?.remove();
+        touchPreview = null;
+        touchPreviewDirection = 0;
+        galleryViewerMedia.style.overflow = "";
+    }
+    function fadeTouchControls(distance) {
+        if (distance) { filmstripTouchMode = false; clearTimeout(filmstripLoadTimer); }
+        const opacity = String(Math.max(0, 1 - distance / (galleryViewerMedia.clientHeight * .5 || 250)));
+        [galleryViewerPrevious, galleryViewerNext, galleryViewerClose, galleryFilmstripTrack.parentElement].forEach(node => {
+            node.style.opacity = distance ? opacity : "";
+        });
+    }
+    function prepareTouchPreview(direction) {
+        filmstripTouchMode = false;
+        clearTimeout(filmstripLoadTimer);
+        if (touchPreviewDirection === direction) return;
+        cleanupTouchPreview();
+        const item = galleryItemsFor(galleryRecord)[activeGalleryIndex + direction];
+        if (!item) return;
+        touchPreviewDirection = direction;
+        touchPreview = document.createElement("div");
+        touchPreview.className = "performance-gallery-progressive-preview touch-adjacent-preview";
+        touchPreview.style.transform = `translateX(${direction * 100}%)`;
+        touchPreview.setAttribute("aria-hidden", "true");
+        attachGalleryThumbnail(touchPreview, item, "", false);
+        galleryViewerMedia.appendChild(touchPreview);
+        galleryViewerMedia.style.overflow = "visible";
+    }
+    async function commitTouchSwipe(direction, transform) {
+        if (galleryTransitioning) return;
+        filmstripTouchMode = false;
+        clearTimeout(filmstripLoadTimer);
+        galleryTransitioning = true;
+        activeGalleryVideo?.pause();
+        prepareTouchPreview(direction);
+        const index = activeGalleryIndex + direction;
+        const animation = galleryViewerMedia.animate?.([
+            { transform }, { transform: `translateX(${-direction * 100}%)` }
+        ], { duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 220,
+            easing: "cubic-bezier(.22,1,.36,1)", fill: "forwards" });
+        try { await animation?.finished; } catch (_) { /* Viewer closed. */ }
+        if (!galleryViewer.hidden) {
+            // Only the thumbnail participates in the swipe; originals load after it settles.
+            renderExpandedGalleryItem(index, { previewImage: touchPreview?.querySelector("img")?.cloneNode(true) || null });
+        }
+        galleryViewerMedia.style.transform = "none";
+        animation?.cancel();
+        cleanupTouchPreview();
+        galleryTransitioning = false;
+    }
+    function loadCenteredFilmstripItem() {
+        if (!filmstripTouchMode || galleryViewer.hidden || galleryTransitioning || filmstripCandidate !== activeGalleryIndex) return;
+        const item = galleryItemsFor(galleryRecord)[filmstripCandidate];
+        if (!filmstripReady || (isGalleryVideo(item) && filmstripFingerDown)) return;
+        filmstripReady = false;
+        renderExpandedGalleryItem(filmstripCandidate, { center: false });
+    }
+    function selectCenteredFilmstripItem() {
+        if (!filmstripTouchMode || galleryViewer.hidden || galleryTransitioning) return;
+        const midpoint = galleryFilmstripTrack.scrollLeft + galleryFilmstripTrack.clientWidth / 2;
+        const buttons = [...galleryFilmstripTrack.children];
+        const button = buttons.reduce((nearest, candidate) =>
+            !nearest || Math.abs(candidate.offsetLeft + candidate.offsetWidth / 2 - midpoint) <
+            Math.abs(nearest.offsetLeft + nearest.offsetWidth / 2 - midpoint) ? candidate : nearest, null);
+        if (!button) return;
+        const index = Number(button.dataset.galleryIndex);
+        if (index === filmstripCandidate) return;
+        filmstripCandidate = index;
+        filmstripReady = false;
+        clearTimeout(filmstripLoadTimer);
+        renderExpandedGalleryItem(index, { previewOnly: true, center: false });
+        filmstripLoadTimer = setTimeout(() => {
+            filmstripReady = true;
+            loadCenteredFilmstripItem();
+        }, 1000);
+    }
+    galleryFilmstripTrack.addEventListener("touchstart", () => {
+        if (galleryTransitioning) return;
+        filmstripTouchMode = true;
+        filmstripFingerDown = true;
+        filmstripCandidate = -1;
+        activeGalleryVideo?.pause();
+        selectCenteredFilmstripItem();
+    }, { passive: true });
+    galleryFilmstripTrack.addEventListener("scroll", selectCenteredFilmstripItem, { passive: true });
+    galleryFilmstripTrack.addEventListener("touchend", event => {
+        if (event.touches.length) return;
+        filmstripFingerDown = false;
+        selectCenteredFilmstripItem();
+        loadCenteredFilmstripItem();
+    }, { passive: true });
+    galleryFilmstripTrack.addEventListener("touchcancel", () => {
+        filmstripFingerDown = false;
+        clearTimeout(filmstripLoadTimer);
+        filmstripTouchMode = false;
+    }, { passive: true });
+    galleryFilmstripTrack.addEventListener("pointerdown", event => {
+        if (event.pointerType === "mouse") {
+            filmstripTouchMode = false;
+            clearTimeout(filmstripLoadTimer);
+        }
+    });
     window.KMCGallerySwipe.attach(galleryViewerMedia, {
         enabled: () => !galleryViewer.hidden && !galleryTransitioning && !isGalleryVideoFullscreen(),
         canChange: direction => activeGalleryIndex + direction >= 0 && activeGalleryIndex + direction < galleryItemsFor(galleryRecord).length,
-        change: (direction, transform) => selectGalleryItem(activeGalleryIndex + direction, transform),
-        close: closeGalleryViewer
+        prepare: prepareTouchPreview,
+        cleanup: cleanupTouchPreview,
+        progress: fadeTouchControls,
+        change: commitTouchSwipe,
+        close: () => { clearTimeout(filmstripLoadTimer); filmstripTouchMode = false; closeGalleryViewer(true); }
     });
     galleryViewerClose?.addEventListener("click", closeGalleryViewer);
     galleryViewerPrevious?.addEventListener("click", () => selectGalleryItem(activeGalleryIndex - 1));
