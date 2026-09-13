@@ -163,6 +163,7 @@ window.KMC_CONFIG = Object.freeze({
     confirmButton.focus({ preventScroll: true });
     return new Promise(resolve => {
       const finish = result => {
+        if (window.KMCOverlayHistory?.leave(modal.id, () => finish(result))) return;
         modal.classList.remove("is-open");
         setTimeout(() => { modal.hidden = true; }, 180);
         confirmButton.onclick = null;
@@ -170,6 +171,7 @@ window.KMC_CONFIG = Object.freeze({
         document.removeEventListener("keydown", onKey);
         resolve(result);
       };
+      window.KMCOverlayHistory?.enter(modal.id, { close: () => finish(false), duration: 180 });
       const onKey = event => { if (event.key === "Escape") finish(false); };
       confirmButton.onclick = () => finish(true);
       modal.querySelector("[data-cancel]").onclick = () => finish(false);

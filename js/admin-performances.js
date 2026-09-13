@@ -213,6 +213,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function closeZipDialog() {
+        if (window.KMCOverlayHistory?.leave(zipDialog.id)) return;
         zipController?.abort();
         zipRun += 1;
         zipBusy = false;
@@ -244,6 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
         zipYes.textContent = "Yes";
         zipNo.textContent = "No";
         zipDownload.hidden = true;
+        window.KMCOverlayHistory?.enter(zipDialog.id, { close: closeZipDialog });
         zipDialog.showModal();
         zipNo.focus();
     });
@@ -826,9 +828,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function openPerformanceModal(trigger = null) {
+        if (window.KMCOverlayHistory?.deferOpen(() => openPerformanceModal(trigger))) return;
         if (!modal) return;
 
         window.clearTimeout(modalCloseTimer);
+        window.KMCOverlayHistory?.enter(modal.id, { close: closePerformanceModal, open: () => openPerformanceModal(trigger), duration: 360 });
         lastModalTrigger = trigger || document.activeElement;
         modal.hidden = false;
         modal.setAttribute("aria-hidden", "false");
@@ -856,6 +860,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function closePerformanceModal() {
+        if (window.KMCOverlayHistory?.leave(modal.id)) return;
         if (!modal || modal.hidden) return;
 
         modal.classList.remove("is-open");

@@ -10,6 +10,10 @@ document.addEventListener("DOMContentLoaded", () => {
     button.setAttribute("aria-controls", nav.id);
     button.innerHTML = "<span></span><span></span>";
     function toggle(open) {
+        if (open) {
+            if (window.KMCOverlayHistory?.deferOpen(() => toggle(true))) return;
+            window.KMCOverlayHistory?.enter("admin-menu", { close: () => toggle(false), open: () => toggle(true) });
+        } else if (window.KMCOverlayHistory?.leave("admin-menu")) return;
         header.classList.toggle("is-menu-open", open);
         button.setAttribute("aria-expanded", String(open));
         button.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");

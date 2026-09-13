@@ -74,6 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function openModal(section = null) {
+        if (window.KMCOverlayHistory?.deferOpen(() => openModal(section))) return;
         idField.value = section?.id || "";
         headingField.value = section?.heading || "";
         document.getElementById("home-section-editor-title").textContent = section ? "Edit Header and Text" : "Add Header and Text";
@@ -83,6 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
         richEditor = tools.createRichEditor(section?.bodyHtml || "", "Homepage section text");
         host.replaceChildren(richEditor);
 
+        window.KMCOverlayHistory?.enter(modal.id, { close: closeModal, open: () => openModal(section), duration: 180 });
         modal.hidden = false;
         modal.setAttribute("aria-hidden", "false");
         requestAnimationFrame(() => modal.classList.add("is-open"));
@@ -90,6 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function closeModal() {
+        if (window.KMCOverlayHistory?.leave(modal.id)) return;
         modal.classList.remove("is-open");
         modal.setAttribute("aria-hidden", "true");
         window.setTimeout(() => { modal.hidden = true; }, 180);

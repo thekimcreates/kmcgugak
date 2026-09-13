@@ -351,6 +351,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("upload-drop").addEventListener("drop", event => { event.preventDefault(); dragDepth = 0; $("upload-drop").classList.remove("is-dragging"); addFiles([...event.dataTransfer.files]); });
 
     function cancelConfirmation() {
+        if (window.KMCOverlayHistory?.leave("upload-confirm")) return;
         $("upload-confirm").close(); $("upload-submit").innerHTML = "Submit";
         $("upload-submit").removeAttribute("aria-label"); $("upload-submit").removeAttribute("aria-busy");
         renderFiles(); $("upload-submit").focus({ preventScroll: true });
@@ -360,11 +361,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (frozen) { submit(); return; }
         $("upload-submit").innerHTML = spinner; $("upload-submit").setAttribute("aria-label", "Awaiting upload confirmation");
         $("upload-submit").setAttribute("aria-busy", "true");
+        window.KMCOverlayHistory?.enter("upload-confirm", { close: cancelConfirmation });
         $("upload-confirm").showModal();
     });
     $("upload-no").addEventListener("click", cancelConfirmation);
     $("upload-confirm").addEventListener("cancel", event => { event.preventDefault(); cancelConfirmation(); });
-    $("upload-yes").addEventListener("click", () => { $("upload-confirm").close(); frozen = true; submit(); });
+    $("upload-yes").addEventListener("click", () => {
+        const confirmed = () => { $("upload-confirm").close(); frozen = true; submit(); };
+        if (!window.KMCOverlayHistory?.leave("upload-confirm", confirmed)) confirmed();
+    });
     async function submit() {
         if (submitting) return;
         submitting = true; renderFiles();

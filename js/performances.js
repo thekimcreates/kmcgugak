@@ -1067,6 +1067,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function openDetail(record, trigger) {
+        closeArrangementPopover();
+        closeMemberPopover();
+        const openYearFilter = document.getElementById("performance-year-trigger");
+        if (openYearFilter?.getAttribute("aria-expanded") === "true") openYearFilter.click();
+        if (window.KMCOverlayHistory?.deferOpen(() => openDetail(record, trigger))) return;
         if (!detail) return;
 
         window.clearTimeout(closeTimer);
@@ -1426,12 +1431,15 @@ document.addEventListener("DOMContentLoaded", () => {
         closeMemberPopover();
         const yearTrigger = document.getElementById("performance-year-trigger");
         if (yearTrigger?.getAttribute("aria-expanded") === "true") yearTrigger.click();
+        if (window.KMCOverlayHistory?.deferOpen(openArrangementPopover)) return;
+        window.KMCOverlayHistory?.enter("arrangement-filter", { close: closeArrangementPopover, open: openArrangementPopover });
         arrangementPopover.hidden = false;
         arrangementTrigger.setAttribute("aria-expanded", "true");
         arrangementFilter.classList.add("is-open");
     }
 
     function closeArrangementPopover() {
+        if (window.KMCOverlayHistory?.leave("arrangement-filter")) return;
         arrangementPopover.hidden = true;
         arrangementTrigger.setAttribute("aria-expanded", "false");
         arrangementFilter.classList.remove("is-open");
@@ -1450,12 +1458,15 @@ document.addEventListener("DOMContentLoaded", () => {
         closeArrangementPopover();
         const yearTrigger = document.getElementById("performance-year-trigger");
         if (yearTrigger?.getAttribute("aria-expanded") === "true") yearTrigger.click();
+        if (window.KMCOverlayHistory?.deferOpen(openMemberPopover)) return;
+        window.KMCOverlayHistory?.enter("member-filter", { close: closeMemberPopover, open: openMemberPopover });
         memberPopover.hidden = false;
         memberTrigger.setAttribute("aria-expanded", "true");
         memberFilter.classList.add("is-open");
     }
 
     function closeMemberPopover() {
+        if (window.KMCOverlayHistory?.leave("member-filter")) return;
         memberPopover.hidden = true;
         memberTrigger.setAttribute("aria-expanded", "false");
         memberFilter.classList.remove("is-open");

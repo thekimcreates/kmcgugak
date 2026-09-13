@@ -65,8 +65,8 @@ document.addEventListener("DOMContentLoaded", () => {
     saveButton.setAttribute("aria-label", "Changes saved successfully");
     savedTimer = window.setTimeout(() => setDirty(false), 3000);
   };
-  const openModal = modal => { modal.hidden = false; modal.setAttribute("aria-hidden", "false"); requestAnimationFrame(() => modal.classList.add("is-open")); document.body.style.overflow = "hidden"; };
-  const closeModal = modal => { modal.classList.remove("is-open"); modal.setAttribute("aria-hidden", "true"); setTimeout(() => { modal.hidden = true; }, 250); document.body.style.overflow = ""; };
+  const openModal = modal => { if (window.KMCOverlayHistory?.deferOpen(() => openModal(modal))) return; window.KMCOverlayHistory?.enter(modal.id, { close: () => closeModal(modal), open: () => openModal(modal), duration: 250 }); modal.hidden = false; modal.setAttribute("aria-hidden", "false"); requestAnimationFrame(() => modal.classList.add("is-open")); document.body.style.overflow = "hidden"; };
+  const closeModal = modal => { if (window.KMCOverlayHistory?.leave(modal.id)) return; modal.classList.remove("is-open"); modal.setAttribute("aria-hidden", "true"); setTimeout(() => { modal.hidden = true; }, 250); document.body.style.overflow = ""; };
   const preview = (img, wrap, url) => { if (url) { img.src = displayUrl(url); wrap.hidden = false; } else { img.removeAttribute("src"); wrap.hidden = true; } };
   const upload = async (file, folder, id, statusElement = pageStatus) => {
     if (!file) return null;

@@ -232,6 +232,7 @@
         }
 
         function open(card, fromDeepLink = false) {
+            if (window.KMCOverlayHistory?.deferOpen(() => open(card, fromDeepLink))) return;
             const id = card.dataset.arrangement;
             if (!id || activeId === id) return;
 
@@ -263,11 +264,12 @@
             panel.setAttribute("aria-hidden", "false");
             requestAnimationFrame(() => panel.classList.add("is-open"));
 
-            history.replaceState(null, "", `${location.pathname}${location.search}#${encodeURIComponent(id)}`);
+            window.KMCOverlayHistory?.enter("arrangement-detail", { close, open: () => open(card, true), baseUrl: location.pathname + location.search }, `${location.pathname}${location.search}#${encodeURIComponent(id)}`);
             window.setTimeout(() => panel.querySelector(".arrangement-close")?.focus({ preventScroll: true }), 100);
         }
 
         function close() {
+            if (window.KMCOverlayHistory?.leave("arrangement-detail")) return;
             if (!activePanel) return;
 
             activePanel.classList.remove("is-open");
@@ -282,7 +284,7 @@
 
             // Remove the deep-link hash while the document is still locked so the
             // browser cannot scroll the selected card into view during close.
-            history.replaceState(null, "", location.pathname + location.search);
+            if (!window.KMCOverlayHistory?.applying) history.replaceState(history.state, "", location.pathname + location.search);
 
             document.body.classList.remove("arrangement-open");
             Object.assign(document.body.style, { position: "", top: "", left: "", right: "", width: "" });

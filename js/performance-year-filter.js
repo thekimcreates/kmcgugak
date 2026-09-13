@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const popover = document.getElementById("performance-year-popover");
     if (!select || !trigger || !popover) return;
     function close(restoreFocus = false) {
+        if (window.KMCOverlayHistory?.leave("year-filter")) return;
         popover.hidden = true;
         trigger.setAttribute("aria-expanded", "false");
         wrapper.classList.remove("is-open");
@@ -41,6 +42,8 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("performance-arrangement-trigger").click();
         document.getElementById("performance-member-trigger")?.getAttribute("aria-expanded") === "true" &&
             document.getElementById("performance-member-trigger").click();
+        if (window.KMCOverlayHistory?.deferOpen(() => open(last))) return;
+        window.KMCOverlayHistory?.enter("year-filter", { close: () => close(true), open });
         popover.hidden = false;
         trigger.setAttribute("aria-expanded", "true");
         wrapper.classList.add("is-open");

@@ -329,6 +329,7 @@ Public interface controller
         function openMenu() {
             if (!mobileMenu || !menuButton || isMenuOpen()) return;
 
+            window.KMCOverlayHistory?.enter("mobile-menu", { close: () => closeMenu(true), open: openMenu });
             mobileMenu.classList.add("open");
             menuButton.classList.add("active");
             menuButton.setAttribute("aria-expanded", "true");
@@ -344,6 +345,7 @@ Public interface controller
         function closeMenu(restoreFocus = false) {
             if (!mobileMenu || !menuButton || !isMenuOpen()) return;
 
+            if (window.KMCOverlayHistory?.leave("mobile-menu")) return;
             mobileMenu.classList.remove("open");
             menuButton.classList.remove("active");
             menuButton.setAttribute("aria-expanded", "false");
