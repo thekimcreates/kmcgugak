@@ -9,7 +9,7 @@ window.KMCGallerySwipe = {
             start = null;
             if (!enabled() || zoomed() || event.touches.length !== 1 || ignore(event.target)) return;
             const point = event.touches[0];
-            // Leave native video control gestures to the player if native controls are enabled later.
+            // Leave gestures on the native video control bar to the browser.
             const video = event.target.closest?.("video");
             if (video?.controls && point.clientY > video.getBoundingClientRect().bottom - 60) return;
             start = { id: point.identifier, x: point.clientX, y: point.clientY, time: Date.now(), horizontal: false };

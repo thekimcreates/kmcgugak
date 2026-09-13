@@ -47,11 +47,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const galleryViewerPrevious = document.getElementById("performance-gallery-viewer-previous");
     const galleryViewerNext = document.getElementById("performance-gallery-viewer-next");
     const galleryViewerMedia = document.getElementById("performance-gallery-viewer-media");
-    const galleryVideoControls = document.getElementById("performance-gallery-video-controls");
-    const galleryVideoToggle = document.getElementById("performance-gallery-video-toggle");
-    const galleryVideoProgress = document.getElementById("performance-gallery-video-progress");
-    const galleryVideoElapsed = document.getElementById("performance-gallery-video-elapsed");
-    const galleryVideoDuration = document.getElementById("performance-gallery-video-duration");
     const galleryFilmstripTrack = document.getElementById("performance-gallery-filmstrip-track");
 
     let records = [];
@@ -702,8 +697,6 @@ document.addEventListener("DOMContentLoaded", () => {
             activeGalleryVideo.load();
         }
         activeGalleryVideo = null;
-        galleryVideoControls.hidden = true;
-        galleryVideoToggle.classList.remove("is-playing");
     }
 
     function hideGalleryViewerImmediately() {
@@ -802,55 +795,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const video = document.createElement("video");
         video.className = "performance-gallery-streaming-video";
+        video.controls = true;
         video.playsInline = true;
-        // Metadata plus play() lets the browser use HTTP range requests and
-        // buffer only what playback needs instead of downloading the file first.
         video.preload = "metadata";
+        video.setAttribute("aria-label", item.name || "Performance gallery video");
         thumbnail.promise.then((url) => {
             if (url && loadToken === activeGalleryLoadToken) video.poster = url;
         });
-        galleryViewerMedia.appendChild(video);
+        // Native controls stay available while loading or when autoplay is blocked.
+        // A separate preview overlay would cover the browser's play button.
+        previewLayer.replaceWith(video);
         activeGalleryVideo = video;
-        galleryVideoControls.hidden = false;
-
-        const syncVideoControls = () => {
-            const duration = Number(video.duration) || Number(item.duration) || 0;
-            galleryVideoProgress.value = duration ? String((video.currentTime / duration) * 100) : "0";
-            galleryVideoElapsed.textContent = formatDuration(video.currentTime);
-            galleryVideoDuration.textContent = formatDuration(duration);
-            galleryVideoToggle.classList.toggle("is-playing", !video.paused);
-            galleryVideoToggle.setAttribute("aria-label", video.paused ? "Play video" : "Pause video");
-        };
-
-        video.addEventListener("loadedmetadata", syncVideoControls);
-        video.addEventListener("timeupdate", syncVideoControls);
-        video.addEventListener("play", syncVideoControls);
-        video.addEventListener("pause", syncVideoControls);
-        video.addEventListener("ended", syncVideoControls);
-        const revealVideoFrame = () => {
-            if (loadToken !== activeGalleryLoadToken) return;
-            video.classList.add("is-loaded");
-            previewLayer.remove();
-        };
-        video.addEventListener("loadeddata", () => {
-            if (typeof video.requestVideoFrameCallback !== "function") revealVideoFrame();
-        });
-        video.addEventListener("playing", () => {
-            if (loadToken === activeGalleryLoadToken) {
-                if (typeof video.requestVideoFrameCallback === "function") {
-                    video.requestVideoFrameCallback(revealVideoFrame);
-                } else {
-                    revealVideoFrame();
-                }
-            }
-        });
-        galleryVideoToggle.onclick = () => video.paused ? video.play() : video.pause();
-        galleryVideoProgress.oninput = () => {
-            if (Number.isFinite(video.duration)) video.currentTime = (Number(galleryVideoProgress.value) / 100) * video.duration;
-        };
-        syncVideoControls();
         video.src = item.url;
-        video.play().catch(syncVideoControls);
+        video.play().catch(() => {
+            // The visitor can start playback using the browser's play button.
+        });
+    }
+
+    function isGalleryVideoFullscreen() {
+        const fullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+        return Boolean(activeGalleryVideo && (activeGalleryVideo.webkitDisplayingFullscreen ||
+            fullscreen === activeGalleryVideo || fullscreen?.contains(activeGalleryVideo)));
     }
 
     function galleryAspectRatio(item, visual = null) {
@@ -1597,7 +1562,7 @@ document.addEventListener("DOMContentLoaded", () => {
     galleryModalClose?.addEventListener("click", closeGallery);
     galleryModal?.querySelector(".performance-gallery-modal-backdrop")?.addEventListener("click", closeGallery);
     window.KMCGallerySwipe.attach(galleryViewerMedia, {
-        enabled: () => !galleryViewer.hidden && !galleryTransitioning,
+        enabled: () => !galleryViewer.hidden && !galleryTransitioning && !isGalleryVideoFullscreen(),
         change: direction => selectGalleryItem(activeGalleryIndex + direction)
     });
     galleryViewerClose?.addEventListener("click", closeGalleryViewer);
@@ -1635,7 +1600,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     document.addEventListener("keydown", (event) => {
-        if (event.defaultPrevented) return;
+        if (event.defaultPrevented || isGalleryVideoFullscreen()) return;
+        // Let focused native controls handle their own seek and playback keys.
+        if (event.target.closest?.("video") && event.key !== "Escape") return;
         if (!galleryViewer?.hidden && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
             event.preventDefault();
             const direction = event.key === "ArrowLeft" ? -1 : 1;
