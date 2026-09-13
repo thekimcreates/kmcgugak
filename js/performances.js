@@ -1596,6 +1596,10 @@ document.addEventListener("DOMContentLoaded", () => {
     galleryShowAll?.addEventListener("click", () => activeRecord && openGallery(activeRecord));
     galleryModalClose?.addEventListener("click", closeGallery);
     galleryModal?.querySelector(".performance-gallery-modal-backdrop")?.addEventListener("click", closeGallery);
+    window.KMCGallerySwipe.attach(galleryViewerMedia, {
+        enabled: () => !galleryViewer.hidden && !galleryTransitioning,
+        change: direction => selectGalleryItem(activeGalleryIndex + direction)
+    });
     galleryViewerClose?.addEventListener("click", closeGalleryViewer);
     galleryViewerPrevious?.addEventListener("click", () => selectGalleryItem(activeGalleryIndex - 1));
     galleryViewerNext?.addEventListener("click", () => selectGalleryItem(activeGalleryIndex + 1));
