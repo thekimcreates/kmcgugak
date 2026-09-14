@@ -24,7 +24,7 @@ window.KMCGallerySwipe = {
                 event.target.closest?.('button, a, input, select, textarea, [role="slider"], iframe')) return;
             const point = event.touches[0], video = event.target.closest?.('video');
             if (video?.controls && point.clientY > video.getBoundingClientRect().bottom - 60) return;
-            start = { id: point.identifier, x: point.clientX, y: point.clientY, dx: 0, dy: 0, axis: null };
+            start = { id: point.identifier, x: point.clientX, y: point.clientY, dx: 0, dy: 0, axis: null, samples: [{x: point.clientX, t: performance.now()}] };
         }, { passive: true });
         surface.addEventListener("touchmove", event => {
             if (!start) return;
@@ -42,6 +42,9 @@ window.KMCGallerySwipe = {
             if (!start.axis) return;
             if (event.cancelable) event.preventDefault();
             start.dx = dx; start.dy = dy;
+            const now = performance.now();
+            start.samples.push({x: point.clientX, t: now});
+            start.samples = start.samples.filter(sample => now - sample.t <= 120);
             if (start.axis === 'x') prepare(dx < 0 ? 1 : -1);
             const x = start.axis === 'x' ? dx * (canChange(dx < 0 ? 1 : -1) ? 1 : .25) : dx;
             const y = start.axis === 'y' ? Math.max(0, dy) : 0;
@@ -62,7 +65,12 @@ window.KMCGallerySwipe = {
                 else settle();
             } else {
                 const direction = dx < 0 ? 1 : -1;
-                if (Math.abs(dx) >= 60 && canChange(direction)) {
+                const now = performance.now();
+                const sample = gesture.samples.find(sample => now - sample.t <= 120);
+                const velocity = sample ? (point.clientX - sample.x) / Math.max(1, now - sample.t) : 0;
+                const halfway = Math.abs(dx) >= surface.clientWidth / 2;
+                const flick = Math.abs(dx) >= 18 && Math.abs(velocity) >= .5 && Math.sign(velocity) === Math.sign(dx);
+                if ((halfway || flick) && canChange(direction)) {
                     // Selection takes over from the finger's current translation.
                     change(direction, surface.style.transform);
                 } else settle();
