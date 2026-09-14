@@ -1,0 +1,26 @@
+/* Leave the next section visible below both public hero banners. */
+#hero.hero,
+.team-page .team-hero {
+    position: relative;
+    height: 80vh;
+    height: 80dvh;
+    min-height: 0;
+}
+
+/* Center within the banner, including the home logo's starting position. */
+#hero .hero-content,
+.team-page .team-hero .hero-content,
+#hero .hero-logo-stage {
+    top: 50%;
+    left: 50%;
+    margin: 0;
+    transform: translate(-50%, -50%);
+}
+
+#hero .home-hero-scroll,
+.team-page .team-hero-scroll {
+    position: absolute;
+    top: auto;
+    bottom: clamp(16px, 4vh, 34px);
+    bottom: clamp(16px, 4dvh, 34px);
+}
