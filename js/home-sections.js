@@ -45,7 +45,7 @@
             return merged;
         });
         byId.forEach(section => {
-            if (section.type === "text" && section.id) result.push(section);
+            if (["text", "images"].includes(section.type) && section.id) result.push(section);
         });
         return result
             .filter(section => section.hidden !== true)
@@ -90,6 +90,31 @@
             return element;
         }
 
+        function createImageSection(section) {
+            const element = createTextSection({ ...section, bodyHtml: "" });
+            element.classList.add("home-images-section");
+            const grid = element.querySelector(".home-custom-rich-text");
+            grid.className = "home-caption-grid";
+            (Array.isArray(section.images) ? section.images : []).forEach(item => {
+                if (!item || !/^https?:\/\//i.test(item.url || "")) return;
+                const figure = document.createElement("figure");
+                const image = document.createElement("img");
+                image.src = item.url;
+                image.alt = item.caption || "";
+                image.loading = "lazy";
+                image.decoding = "async";
+                if (item.width > 0 && item.height > 0) { image.width = item.width; image.height = item.height; }
+                figure.append(image);
+                if (item.caption) {
+                    const caption = document.createElement("figcaption");
+                    caption.textContent = item.caption;
+                    figure.append(caption);
+                }
+                grid.append(figure);
+            });
+            return grid.children.length ? element : null;
+        }
+
         function render(sections, force = false) {
             const normalized = normalizeSections(sections);
             const signature = JSON.stringify(normalized);
@@ -97,7 +122,7 @@
             renderedSignature = signature;
             const fragment = document.createDocumentFragment();
             normalized.forEach(section => {
-                const node = section.type === "text"
+                const node = section.type === "images" ? createImageSection(section) : section.type === "text"
                     ? createTextSection(section)
                     : getTemplateNode(section.template || section.id);
                 if (node) fragment.appendChild(node);

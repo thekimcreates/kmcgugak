@@ -28,6 +28,64 @@ document.addEventListener("DOMContentLoaded", () => {
     let sections = [];
     let richEditor = null;
     let redirecting = false;
+    let imageDraft = [];
+    let editorType = "text";
+    let saving = false;
+    const imageEditor = document.getElementById("home-section-images-editor");
+    const imageInput = document.getElementById("home-section-images-upload");
+    const imageList = document.getElementById("home-section-images-list");
+    function releaseDraft() {
+        imageDraft.forEach(item => { if (item.preview) URL.revokeObjectURL(item.preview); });
+        imageDraft = [];
+    }
+    function renderImages() {
+        imageList.replaceChildren();
+        imageDraft.forEach((item, index) => {
+            const card = document.createElement("div");
+            card.className = "home-caption-editor-card";
+            const img = document.createElement("img");
+            img.src = item.preview || item.url;
+            img.alt = "Image preview";
+            const label = document.createElement("label");
+            label.textContent = `Caption for image ${index + 1}`;
+            const caption = document.createElement("textarea");
+            caption.maxLength = 2000;
+            caption.value = item.caption || "";
+            caption.addEventListener("input", () => { item.caption = caption.value; });
+            label.append(caption);
+            const actions = document.createElement("div");
+            actions.className = "home-section-admin-actions";
+            for (const [text, offset] of [["Move up", -1], ["Move down", 1], ["Remove", 0]]) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "admin-secondary-button admin-small-button";
+                button.textContent = text;
+                button.disabled = offset !== 0 && (index + offset < 0 || index + offset >= imageDraft.length);
+                button.addEventListener("click", () => {
+                    if (saving) return;
+                    if (!offset) {
+                        if (item.preview) URL.revokeObjectURL(item.preview);
+                        imageDraft.splice(index, 1);
+                    } else [imageDraft[index], imageDraft[index + offset]] = [imageDraft[index + offset], imageDraft[index]];
+                    renderImages();
+                });
+                actions.append(button);
+            }
+            card.append(img, label, actions);
+            imageList.append(card);
+        });
+    }
+    imageInput.addEventListener("change", () => {
+        for (const file of imageInput.files) {
+            if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+                status(formStatus, "Choose JPG, PNG, or WebP images.", "error");
+                continue;
+            }
+            imageDraft.push({ file, preview: URL.createObjectURL(file), caption: "" });
+        }
+        imageInput.value = "";
+        renderImages();
+    });
 
     const status = (element, message, type = "") => {
         if (!element) return;
@@ -52,7 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         byId.forEach(section => {
-            if (section.type === "text" && section.id) output.push(section);
+            if (["text", "images"].includes(section.type) && section.id) output.push(section);
         });
 
         return output
@@ -64,27 +122,34 @@ document.addEventListener("DOMContentLoaded", () => {
         sections = normalize(sections);
         await db.collection("siteContent").doc("homeSections").set({ sections }, { merge: true });
         if (activity) {
-            await tools?.logActivity?.(db, auth, activity.action, "homepage section", activity.id || "", activity.label || "");
+            await tools?.logActivity?.(db, auth, activity.action, "homepage section", activity.id || "", activity.label || "").catch(error => console.warn("Activity log unavailable:", error));
         }
     }
 
     function sectionLabel(section) {
-        if (section.type === "text") return section.heading || "Untitled text section";
+        if (["text", "images"].includes(section.type)) return section.heading || "Untitled text section";
         return section.label || DEFAULT_SECTIONS.find(item => item.id === section.id)?.label || "Homepage section";
     }
 
-    function openModal(section = null) {
-        if (window.KMCOverlayHistory?.deferOpen(() => openModal(section))) return;
+    function openModal(section = null, type = "text") {
+        if (saving) return;
+        if (window.KMCOverlayHistory?.deferOpen(() => openModal(section, type))) return;
+        releaseDraft();
+        editorType = section?.type || type;
+        imageDraft = (section?.images || []).map(item => ({ ...item }));
+        imageEditor.hidden = editorType !== "images";
+        document.getElementById("home-section-body-editor").parentElement.hidden = editorType === "images";
+        renderImages();
         idField.value = section?.id || "";
         headingField.value = section?.heading || "";
-        document.getElementById("home-section-editor-title").textContent = section ? "Edit Header and Text" : "Add Header and Text";
+        document.getElementById("home-section-editor-title").textContent = `${section ? "Edit" : "Add"} ${editorType === "images" ? "Images and Captions" : "Header and Text"}`;
         formStatus.textContent = "";
 
         const host = document.getElementById("home-section-body-editor");
         richEditor = tools.createRichEditor(section?.bodyHtml || "", "Homepage section text");
         host.replaceChildren(richEditor);
 
-        window.KMCOverlayHistory?.enter(modal.id, { close: closeModal, open: () => openModal(section), duration: 180 });
+        window.KMCOverlayHistory?.enter(modal.id, { close: closeModal, open: () => openModal(section, type), duration: 180 });
         modal.hidden = false;
         modal.setAttribute("aria-hidden", "false");
         requestAnimationFrame(() => modal.classList.add("is-open"));
@@ -92,6 +157,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function closeModal() {
+        if (saving) return;
         if (window.KMCOverlayHistory?.leave(modal.id)) return;
         modal.classList.remove("is-open");
         modal.setAttribute("aria-hidden", "true");
@@ -120,13 +186,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const title = document.createElement("h3");
             title.textContent = sectionLabel(section);
             const meta = document.createElement("p");
-            meta.textContent = section.type === "text" ? "Custom header and text" : "Built-in homepage template";
+            meta.textContent = section.type === "images" ? "Images and captions" : section.type === "text" ? "Custom header and text" : "Built-in homepage template";
             copy.append(title, meta);
 
             const actions = document.createElement("div");
             actions.className = "home-section-admin-actions";
 
-            if (section.type === "text") {
+            if (["text", "images"].includes(section.type)) {
                 const edit = document.createElement("button");
                 edit.type = "button";
                 edit.className = "admin-secondary-button admin-small-button";
@@ -283,32 +349,56 @@ document.addEventListener("DOMContentLoaded", () => {
         const heading = headingField.value.trim();
         if (!heading) return status(formStatus, "Enter a header.", "error");
 
+        if (saving) return;
+        if (editorType === "images" && !imageDraft.length) return status(formStatus, "Add at least one image.", "error");
         const oldId = idField.value;
         const existing = sections.find(section => section.id === oldId);
-        const id = oldId || `text-${Date.now()}`;
-        const record = {
-            id,
-            type: "text",
-            heading,
-            bodyHtml: richEditor.getHtml(),
-            bodyText: richEditor.getText(),
-            order: existing?.order ?? sections.length
-        };
-
-        sections = existing
-            ? sections.map(section => section.id === id ? record : section)
-            : [...sections, record];
-
+        const id = oldId || `${editorType}-${Date.now()}`;
+        const previous = sections;
+        saving = true;
+        const controls = [...form.querySelectorAll("button, input, textarea")];
+        const disabledStates = controls.map(control => control.disabled);
+        controls.forEach(control => { control.disabled = true; });
         try {
+            const images = [];
+            if (editorType === "images") {
+                for (const [index, item] of imageDraft.entries()) {
+                    if (item.file) {
+                        status(formStatus, `Uploading image ${index + 1} of ${imageDraft.length}…`);
+                        const result = await window.kmcImageOptimizer.optimize(item.file, { maxWidth: 1920, maxHeight: 1920, quality: 0.88 });
+                        const path = `home/hero/section-${id}-${Date.now()}-${index}.${result.extension}`;
+                        const upload = await firebaseServices.storage.ref(path).put(result.blob, { contentType: result.contentType });
+                        item.url = await upload.ref.getDownloadURL();
+                        item.path = path;
+                        item.width = result.width;
+                        item.height = result.height;
+                        delete item.file;
+                    }
+                    images.push({ url: item.url, path: item.path || "", caption: item.caption || "", width: item.width || 0, height: item.height || 0 });
+                }
+            }
+            const record = {
+                id, type: editorType, heading,
+                ...(editorType === "images" ? { images } : { bodyHtml: richEditor.getHtml(), bodyText: richEditor.getText() }),
+                order: existing?.order ?? sections.length
+            };
+            sections = existing ? sections.map(section => section.id === id ? record : section) : [...sections, record];
             await saveSections({ action: existing ? "Updated" : "Created", id, label: heading });
             renderList();
+            saving = false;
             closeModal();
             status(pageStatus, "Homepage section saved.", "success");
         } catch (error) {
+            sections = previous;
             console.error(error);
-            status(formStatus, "The section could not be saved.", "error");
+            status(formStatus, "The section could not be saved. Please retry.", "error");
+        } finally {
+            saving = false;
+            controls.forEach((control, index) => { control.disabled = disabledStates[index]; });
         }
     });
+
+    document.getElementById("add-images-section").addEventListener("click", () => openModal(null, "images"));
 
     addButton.addEventListener("click", () => openModal());
     modal.querySelector("[data-close-home-section-modal]").addEventListener("click", closeModal);
