@@ -39,6 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
         imageDraft = [];
     }
     function renderImages() {
+        if (!imageList) return;
         imageList.replaceChildren();
         imageDraft.forEach((item, index) => {
             const card = document.createElement("div");
@@ -75,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
             imageList.append(card);
         });
     }
-    imageInput.addEventListener("change", () => {
+    imageInput?.addEventListener("change", () => {
         for (const file of imageInput.files) {
             if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
                 status(formStatus, "Choose JPG, PNG, or WebP images.", "error");
@@ -133,11 +134,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function openModal(section = null, type = "text") {
         if (saving) return;
+        if ((!imageEditor || !imageInput || !imageList) && (section?.type === "images" || type === "images")) {
+            status(pageStatus, "Please reload this page to load the image editor update.", "error");
+            return;
+        }
         if (window.KMCOverlayHistory?.deferOpen(() => openModal(section, type))) return;
         releaseDraft();
         editorType = section?.type || type;
         imageDraft = (section?.images || []).map(item => ({ ...item }));
-        imageEditor.hidden = editorType !== "images";
+        if (imageEditor) imageEditor.hidden = editorType !== "images";
         document.getElementById("home-section-body-editor").parentElement.hidden = editorType === "images";
         renderImages();
         idField.value = section?.id || "";
@@ -398,7 +403,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    document.getElementById("add-images-section").addEventListener("click", () => openModal(null, "images"));
+    document.getElementById("add-images-section")?.addEventListener("click", () => openModal(null, "images"));
 
     addButton.addEventListener("click", () => openModal());
     modal.querySelector("[data-close-home-section-modal]").addEventListener("click", closeModal);

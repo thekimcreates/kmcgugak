@@ -3,7 +3,7 @@
 <head>
 <script defer src="/js/overlay-history.js?v=20260913allback1"></script>
     <base href="/">
-    <link rel="canonical" href="https://kmcoc.org/admin/home/">
+    <link rel="canonical" href="https://kmcgugak.org/admin/home/">
     <script>if (/\/index\.html$/.test(location.pathname)) history.replaceState(null, "", location.pathname.replace(/index\.html$/, "") + location.search + location.hash);</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,6 +17,7 @@
 <link rel="apple-touch-icon" href="/assets/logo/kmc-gugak-favicon.png?v=20260912">
 <link rel="stylesheet" href="/css/layout-fit.css?v=20260914layout1">
 <script defer src="/js/layout-fit.js?v=20260914layout1"></script>
+<link rel="stylesheet" href="/css/home-captions.css?v=20260916captions1">
 </head>
 <body data-admin-page="home-sections">
 <div class="admin-shell">
@@ -63,6 +64,7 @@
                 <div>
                     <h2>Sections</h2>
                 </div>
+                <button id="add-images-section" class="admin-submit" type="button">Add Images and Captions</button>
                 <button id="add-text-section" class="admin-submit" type="button">Add Header and Text</button>
             </div>
 
@@ -103,6 +105,11 @@
                         <label>Text</label>
                         <div id="home-section-body-editor"></div>
                     </div>
+                    <div id="home-section-images-editor" hidden>
+                        <div class="admin-field"><label for="home-section-images-upload">Images</label>
+                        <input id="home-section-images-upload" type="file" accept="image/jpeg,image/png,image/webp" multiple></div>
+                        <div id="home-section-images-list"></div>
+                    </div>
                     <p id="home-section-form-status" class="login-status" role="status" aria-live="polite"></p>
                     <button class="admin-submit" type="submit">Save Section</button>
                 </form>
@@ -119,7 +126,7 @@
 
 
 <script src="../js/image-optimizer.js?v=20260725p3a"></script>
-<script src="../js/admin-home.js?v=20260913allback1"></script>
+<script src="../js/admin-home.js?v=20260916homefix2"></script>
 <script src="../js/admin-home-hero.js?v=20260725p3a"></script>
 
 <script src="../js/admin-header.js?v=20260913allback1"></script></body>
