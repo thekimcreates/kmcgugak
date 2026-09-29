@@ -79,6 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const galleryLegacyPreviewPromises = new Map();
     const galleryLegacyPreviewQueue = [];
     let galleryLegacyPreviewWorkers = 0;
+    const thumbnailObservers = new Map();
 
     if (!grid) return;
 
@@ -564,10 +565,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function attachGalleryThumbnail(container, item, className = "", allowLegacy = true) {
-        const placeholder = createGalleryPlaceholder(item);
+    function attachGalleryThumbnail(container, item, className = "", allowLegacy = true, existingPlaceholder = null) {
+        const placeholder = existingPlaceholder || createGalleryPlaceholder(item);
         if (className) placeholder.classList.add(className);
-        container.appendChild(placeholder);
+        if (!existingPlaceholder) container.appendChild(placeholder);
         const promise = (async () => {
             for await (const candidate of resolveGalleryThumbnails(item)) {
                 const image = document.createElement("img");
@@ -581,7 +582,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 try {
                     // Native image loading can display cross-origin thumbnails
                     // even when a CORS fetch/cache request is unavailable.
-                    const source = candidate;
+                    const source = await cachedImageSource(candidate, GALLERY_CACHE_NAMES.thumbnails);
                     await loadAndDecodeImage(image, source, 12000);
                     if (placeholder.isConnected) placeholder.replaceWith(image);
                     return source;
@@ -627,7 +628,32 @@ document.addEventListener("DOMContentLoaded", () => {
         tile.className = className;
         tile.dataset.galleryIndex = String(index);
         tile.setAttribute("aria-label", `Open ${item.name || (isGalleryVideo(item) ? "video" : "photo")}`);
-        attachGalleryThumbnail(tile, item);
+        // Observe within the panel that actually scrolls. Starting every image
+        // request while the grid is hidden can starve the visible thumbnails.
+        const root = className === "performance-gallery-tile"
+            ? galleryModal.querySelector(".performance-gallery-modal-shell")
+            : className === "performance-gallery-filmstrip-item"
+                ? galleryFilmstripTrack : detail.querySelector(".performance-detail-scroll");
+        const placeholder = createGalleryPlaceholder(item);
+        tile.appendChild(placeholder);
+        if ("IntersectionObserver" in window) {
+            let observer = thumbnailObservers.get(root);
+            if (!observer) {
+                observer = new IntersectionObserver(entries => {
+                    entries.forEach(entry => {
+                        if (!entry.isIntersecting) return;
+                        observer.unobserve(entry.target);
+                        entry.target.loadGalleryThumbnail?.();
+                        delete entry.target.loadGalleryThumbnail;
+                    });
+                }, { root, rootMargin: "300px", threshold: 0 });
+                thumbnailObservers.set(root, observer);
+            }
+            tile.loadGalleryThumbnail = () => attachGalleryThumbnail(tile, item, "", true, placeholder);
+            observer.observe(tile);
+        } else {
+            attachGalleryThumbnail(tile, item, "", true, placeholder);
+        }
         if (isGalleryVideo(item)) {
             const badge = document.createElement("span");
             badge.className = "performance-gallery-video-badge";
@@ -640,6 +666,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let galleryDetailRequest = 0;
     function renderGallery(record) {
         const request = ++galleryDetailRequest;
+        const detailObserver = thumbnailObservers.get(detail.querySelector(".performance-detail-scroll"));
+        detailObserver?.disconnect();
         if (record._summaryOnly) {
             gallerySection.hidden = false;
             galleryShowAll.hidden = true;
@@ -702,6 +730,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function hideGalleryViewerImmediately() {
+        thumbnailObservers.get(galleryFilmstripTrack)?.disconnect();
         clearTimeout(filmstripLoadTimer);
         filmstripTouchMode = false;
         filmstripFingerDown = false;
@@ -1034,6 +1063,7 @@ document.addEventListener("DOMContentLoaded", () => {
         overlayHistory.enter(2, record.id);
         hideGalleryViewerImmediately();
         galleryModalTitle.textContent = `${getLocation(record)} ${formatGalleryDate(record.date)} - Gallery`;
+        thumbnailObservers.get(galleryModal.querySelector(".performance-gallery-modal-shell"))?.disconnect();
         galleryGrid.replaceChildren(...items.map((item, index) => {
             const tile = createGalleryTile(item, "performance-gallery-tile", index);
             tile.addEventListener("click", () => openGalleryViewer(index, tile));
@@ -1051,6 +1081,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!galleryModal || galleryModal.hidden) return;
         if (historyDriven !== true && overlayHistory.leave(1)) return;
         hideGalleryViewerImmediately();
+        thumbnailObservers.get(galleryModal.querySelector(".performance-gallery-modal-shell"))?.disconnect();
         galleryModal.classList.remove("is-open");
         document.body.classList.remove("performance-gallery-open");
         return new Promise(resolve => window.setTimeout(() => {
@@ -1648,6 +1679,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
     detailClose?.addEventListener("click", () => closeDetail());
     detail?.querySelector(".performance-detail-backdrop")?.addEventListener("click", () => closeDetail());
+    // Gestures that begin on an overlay's backdrop should move its visible
+    // panel, never the dialog or page behind it.
+    function routeBackdropScroll(backdrop, scrollPanel, isTopmost) {
+        let lastTouchY = null;
+        backdrop?.addEventListener("wheel", event => {
+            if (!isTopmost()) return;
+            event.preventDefault();
+            scrollPanel.scrollTop += event.deltaY;
+        }, { passive: false });
+        backdrop?.addEventListener("touchstart", event => {
+            lastTouchY = isTopmost() ? event.touches[0]?.clientY : null;
+        }, { passive: true });
+        backdrop?.addEventListener("touchmove", event => {
+            if (lastTouchY == null || !isTopmost()) return;
+            const y = event.touches[0]?.clientY;
+            if (y == null) return;
+            event.preventDefault();
+            scrollPanel.scrollTop += lastTouchY - y;
+            lastTouchY = y;
+        }, { passive: false });
+        backdrop?.addEventListener("touchend", () => { lastTouchY = null; });
+        backdrop?.addEventListener("touchcancel", () => { lastTouchY = null; });
+    }
+    routeBackdropScroll(detail?.querySelector(".performance-detail-backdrop"),
+        detail?.querySelector(".performance-detail-scroll"),
+        () => !detail.hidden && galleryModal.hidden);
+    routeBackdropScroll(galleryModal?.querySelector(".performance-gallery-modal-backdrop"),
+        galleryModal?.querySelector(".performance-gallery-modal-shell"),
+        () => !galleryModal.hidden && galleryViewer.hidden);
     detail?.addEventListener("keydown", trapDetailFocus);
     galleryShowAll?.addEventListener("click", () => activeRecord && openGallery(activeRecord));
     galleryModalClose?.addEventListener("click", closeGallery);

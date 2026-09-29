@@ -724,7 +724,7 @@ body.performance-gallery-viewer-open {
 .performance-gallery-modal { position:fixed; inset:0; z-index:14000; display:grid; place-items:center; padding:20px; background:transparent; }
 .performance-gallery-modal[hidden],.performance-gallery-viewer[hidden] { display:none !important; }
 .performance-gallery-modal-backdrop { position:absolute; inset:0; background:#f5f5f7; opacity:0; transition:opacity .18s ease; }
-.performance-gallery-modal-shell { position:relative; width:min(1440px,100%); height:min(92dvh,980px); overflow:auto; padding:clamp(20px,3vw,38px); border:1px solid rgba(20,20,20,.08); border-radius:30px; background:#fff; box-shadow:0 28px 100px rgba(0,0,0,.18); opacity:0; transform:translateY(14px) scale(.985); transition:opacity .2s ease, transform .26s cubic-bezier(.22,1,.36,1); }
+.performance-gallery-modal-shell { position:relative; width:min(1440px,100%); height:min(92dvh,980px); overflow:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; padding:clamp(20px,3vw,38px); border:1px solid rgba(20,20,20,.08); border-radius:30px; background:#fff; box-shadow:0 28px 100px rgba(0,0,0,.18); opacity:0; transform:translateY(14px) scale(.985); transition:opacity .2s ease, transform .26s cubic-bezier(.22,1,.36,1); }
 .performance-gallery-modal.is-open .performance-gallery-modal-backdrop,.performance-gallery-modal.is-open .performance-gallery-modal-shell { opacity:1; }
 .performance-gallery-modal.is-open .performance-gallery-modal-shell { transform:translateY(0) scale(1); }
 .performance-gallery-modal.is-viewing .performance-gallery-modal-shell { overflow:hidden; }
