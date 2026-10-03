@@ -645,6 +645,26 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    const watchedThumbnailRoots = new WeakSet();
+    function watchGalleryThumbnailScroll(root, container) {
+        if (!root || !container || watchedThumbnailRoots.has(root)) return;
+        watchedThumbnailRoots.add(root);
+        let frame = 0;
+        const refresh = () => {
+            if (frame) return;
+            frame = requestAnimationFrame(() => {
+                frame = 0;
+                loadVisibleGalleryThumbnails(root, container);
+            });
+        };
+        // iOS can miss IntersectionObserver updates inside a fixed, scrolling
+        // dialog. This lightweight fallback starts previews near the viewport
+        // on every real scroll, without eagerly loading the whole gallery.
+        root.addEventListener("scroll", refresh, { passive: true });
+        root.addEventListener("touchend", refresh, { passive: true });
+        window.addEventListener("resize", refresh, { passive: true });
+    }
+
     function createGalleryTile(item, className, index) {
         const tile = document.createElement("button");
         tile.type = "button";
@@ -657,6 +677,11 @@ document.addEventListener("DOMContentLoaded", () => {
             ? galleryModal.querySelector(".performance-gallery-modal-shell")
             : className === "performance-gallery-filmstrip-item"
                 ? galleryFilmstripTrack : detail.querySelector(".performance-detail-scroll");
+        const galleryContainer = className === "performance-gallery-tile"
+            ? galleryGrid
+            : className === "performance-gallery-filmstrip-item"
+                ? galleryFilmstripTrack : galleryPreview;
+        watchGalleryThumbnailScroll(root, galleryContainer);
         const placeholder = createGalleryPlaceholder(item);
         tile.appendChild(placeholder);
         if ("IntersectionObserver" in window) {
@@ -1739,17 +1764,31 @@ document.addEventListener("DOMContentLoaded", () => {
     // a fixed popup can let scroll events reach the detail dialog underneath.
     function routeOverlayScroll(overlay, scrollPanel, isTopmost) {
         let lastTouchY = null;
+        let startedInScrollPanel = false;
         overlay?.addEventListener("wheel", event => {
             if (!isTopmost()) return;
+            // Preserve the browser's own scrolling and momentum when the
+            // gesture is already inside the visible panel.
+            if (scrollPanel?.contains(event.target)) {
+                event.stopPropagation();
+                return;
+            }
             event.preventDefault();
             event.stopPropagation();
             if (scrollPanel) scrollPanel.scrollTop += event.deltaY;
         }, { passive: false });
         overlay?.addEventListener("touchstart", event => {
+            startedInScrollPanel = Boolean(scrollPanel?.contains(event.target));
             lastTouchY = isTopmost() ? event.touches[0]?.clientY : null;
         }, { passive: true });
         overlay?.addEventListener("touchmove", event => {
             if (lastTouchY == null || !isTopmost()) return;
+            if (startedInScrollPanel) {
+                // Do not cancel native touch scrolling: cancelling it removes
+                // iOS/Android's momentum as soon as the finger is lifted.
+                event.stopPropagation();
+                return;
+            }
             const y = event.touches[0]?.clientY;
             if (y == null) return;
             event.preventDefault();
@@ -1757,8 +1796,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (scrollPanel) scrollPanel.scrollTop += lastTouchY - y;
             lastTouchY = y;
         }, { passive: false });
-        overlay?.addEventListener("touchend", () => { lastTouchY = null; });
-        overlay?.addEventListener("touchcancel", () => { lastTouchY = null; });
+        overlay?.addEventListener("touchend", () => { lastTouchY = null; startedInScrollPanel = false; });
+        overlay?.addEventListener("touchcancel", () => { lastTouchY = null; startedInScrollPanel = false; });
     }
     routeOverlayScroll(detail,
         detail?.querySelector(".performance-detail-scroll"),
