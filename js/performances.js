@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const selectedMembers = new Set();
     let filtersInitializedFromUrl = false;
     const CACHE_KEYS = {
-        performances: "kmc-public-performances-v3",
+        performances: "kmc-public-performances-v4",
         arrangements: "kmc-public-performance-arrangements-v2",
         members: "kmc-public-performance-members-v2"
     };
@@ -124,6 +124,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (record.locationTbd) return "Location TBD";
         return record.locationName || record.location || "Location unavailable";
     }
+
+    // Hidden performances stay available through their direct URL, but do not
+    // belong in the public grid, filters, or public-record cache.
+    const isPublicPerformance = (record) => record?.hidden !== true;
 
     function arrangementLabel(arrangement) {
         return `${arrangement.name || "Arrangement"} ${arrangement.koreanName || ""}`.trim();
@@ -622,6 +626,25 @@ document.addEventListener("DOMContentLoaded", () => {
         return { placeholder, promise };
     }
 
+    function startGalleryThumbnail(tile) {
+        if (!tile?.loadGalleryThumbnail) return;
+        const load = tile.loadGalleryThumbnail;
+        delete tile.loadGalleryThumbnail;
+        load();
+    }
+
+    function loadVisibleGalleryThumbnails(root, container) {
+        if (!root || !container || !root.isConnected || !container.isConnected) return;
+        const rootBounds = root.getBoundingClientRect();
+        if (!rootBounds.width || !rootBounds.height) return;
+        const preloadTop = rootBounds.top - 700;
+        const preloadBottom = rootBounds.bottom + 700;
+        container.querySelectorAll("[data-gallery-index]").forEach((tile) => {
+            const bounds = tile.getBoundingClientRect();
+            if (bounds.bottom >= preloadTop && bounds.top <= preloadBottom) startGalleryThumbnail(tile);
+        });
+    }
+
     function createGalleryTile(item, className, index) {
         const tile = document.createElement("button");
         tile.type = "button";
@@ -643,8 +666,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     entries.forEach(entry => {
                         if (!entry.isIntersecting) return;
                         observer.unobserve(entry.target);
-                        entry.target.loadGalleryThumbnail?.();
-                        delete entry.target.loadGalleryThumbnail;
+                        startGalleryThumbnail(entry.target);
                     });
                 }, { root, rootMargin: "300px", threshold: 0 });
                 thumbnailObservers.set(root, observer);
@@ -708,6 +730,9 @@ document.addEventListener("DOMContentLoaded", () => {
             tile.addEventListener("click", () => openGallery(record, index, tile));
             return tile;
         }));
+        requestAnimationFrame(() => loadVisibleGalleryThumbnails(
+            detail.querySelector(".performance-detail-scroll"), galleryPreview
+        ));
     }
 
     function waitForAnimationFrames(count = 1) {
@@ -789,6 +814,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             return button;
         }));
+        requestAnimationFrame(() => loadVisibleGalleryThumbnails(galleryFilmstripTrack, galleryFilmstripTrack));
     }
 
     function renderExpandedGalleryItem(index, { previewOnly = false, center = true, previewImage = null } = {}) {
@@ -1072,7 +1098,12 @@ document.addEventListener("DOMContentLoaded", () => {
         galleryModal.hidden = false;
         galleryModal.setAttribute("aria-hidden", "false");
         document.body.classList.add("performance-gallery-open");
-        requestAnimationFrame(() => galleryModal.classList.add("is-open"));
+        requestAnimationFrame(() => {
+            galleryModal.classList.add("is-open");
+            loadVisibleGalleryThumbnails(
+                galleryModal.querySelector(".performance-gallery-modal-shell"), galleryGrid
+            );
+        });
         if (Number.isInteger(initialIndex)) openGalleryViewer(initialIndex, sourceTile);
         else galleryModalClose.focus({ preventScroll: true });
     }
@@ -1629,6 +1660,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (target.depth < 1) return;
         let record = activeRecord?.id === target.id ? activeRecord : records.find(item => item.id === target.id);
+        if (!record && target.id) {
+            try {
+                record = await resolveLinkablePerformance(target.id);
+            } catch (_) {
+                return;
+            }
+        }
         if (!record) return;
         if (detail.hidden || activeRecord?.id !== target.id) openDetail(record);
         if (target.depth >= 2 && galleryModal.hidden) {
@@ -1644,7 +1682,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    function openHashRecord() {
+    const directPerformanceRequests = new Map();
+    function resolveLinkablePerformance(id) {
+        const listed = records.find((item) => item.id === id);
+        if (listed) return Promise.resolve(listed);
+        if (!directPerformanceRequests.has(id)) {
+            const request = window.KMCPerformanceList.detail({ id }, { fresh: true })
+                .finally(() => directPerformanceRequests.delete(id));
+            directPerformanceRequests.set(id, request);
+        }
+        return directPerformanceRequests.get(id);
+    }
+
+    async function openHashRecord() {
         if (overlayHistory.current()) {
             void overlayHistory.restore();
             return;
@@ -1660,8 +1710,14 @@ document.addEventListener("DOMContentLoaded", () => {
             console.warn("Unable to decode performance link:", error);
         }
 
-        const record = records.find((item) => item.id === id);
-        if (!record) return;
+        let record;
+        try {
+            record = await resolveLinkablePerformance(id);
+        } catch (error) {
+            console.warn("Unable to open performance link:", error);
+            return;
+        }
+        if (readReferenceHash() !== id || overlayHistory.busy()) return;
 
         const matchingCard = [...grid.querySelectorAll(".performance-card")]
             .find((card) => card.dataset.performanceId === id);
@@ -1679,35 +1735,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
     detailClose?.addEventListener("click", () => closeDetail());
     detail?.querySelector(".performance-detail-backdrop")?.addEventListener("click", () => closeDetail());
-    // Gestures that begin on an overlay's backdrop should move its visible
-    // panel, never the dialog or page behind it.
-    function routeBackdropScroll(backdrop, scrollPanel, isTopmost) {
+    // Keep wheel/touch scrolling inside the foremost overlay. Without this,
+    // a fixed popup can let scroll events reach the detail dialog underneath.
+    function routeOverlayScroll(overlay, scrollPanel, isTopmost) {
         let lastTouchY = null;
-        backdrop?.addEventListener("wheel", event => {
+        overlay?.addEventListener("wheel", event => {
             if (!isTopmost()) return;
             event.preventDefault();
-            scrollPanel.scrollTop += event.deltaY;
+            event.stopPropagation();
+            if (scrollPanel) scrollPanel.scrollTop += event.deltaY;
         }, { passive: false });
-        backdrop?.addEventListener("touchstart", event => {
+        overlay?.addEventListener("touchstart", event => {
             lastTouchY = isTopmost() ? event.touches[0]?.clientY : null;
         }, { passive: true });
-        backdrop?.addEventListener("touchmove", event => {
+        overlay?.addEventListener("touchmove", event => {
             if (lastTouchY == null || !isTopmost()) return;
             const y = event.touches[0]?.clientY;
             if (y == null) return;
             event.preventDefault();
-            scrollPanel.scrollTop += lastTouchY - y;
+            event.stopPropagation();
+            if (scrollPanel) scrollPanel.scrollTop += lastTouchY - y;
             lastTouchY = y;
         }, { passive: false });
-        backdrop?.addEventListener("touchend", () => { lastTouchY = null; });
-        backdrop?.addEventListener("touchcancel", () => { lastTouchY = null; });
+        overlay?.addEventListener("touchend", () => { lastTouchY = null; });
+        overlay?.addEventListener("touchcancel", () => { lastTouchY = null; });
     }
-    routeBackdropScroll(detail?.querySelector(".performance-detail-backdrop"),
+    routeOverlayScroll(detail,
         detail?.querySelector(".performance-detail-scroll"),
         () => !detail.hidden && galleryModal.hidden);
-    routeBackdropScroll(galleryModal?.querySelector(".performance-gallery-modal-backdrop"),
+    routeOverlayScroll(galleryModal,
         galleryModal?.querySelector(".performance-gallery-modal-shell"),
         () => !galleryModal.hidden && galleryViewer.hidden);
+    // The expanded viewer has no vertical content to scroll, so it absorbs
+    // wheel input rather than passing it to the gallery or detail popup.
+    galleryViewer?.addEventListener("wheel", event => {
+        if (galleryViewer.hidden) return;
+        event.preventDefault();
+        event.stopPropagation();
+    }, { passive: false });
     detail?.addEventListener("keydown", trapDetailFocus);
     galleryShowAll?.addEventListener("click", () => activeRecord && openGallery(activeRecord));
     galleryModalClose?.addEventListener("click", closeGallery);
@@ -1983,7 +2048,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }));
 
     if (cachedPerformances.length) {
-        records = cachedPerformances;
+        records = cachedPerformances.filter(isPublicPerformance);
         refreshControlsAndCards({ reopenHash: true });
     }
 
@@ -1999,9 +2064,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         performancesRequest
             .then((freshRecords) => {
-
-                const changed = stableStringify(freshRecords) !== stableStringify(records);
-                records = freshRecords;
+                const publicRecords = freshRecords.filter(isPublicPerformance);
+                const changed = stableStringify(publicRecords) !== stableStringify(records);
+                records = publicRecords;
                 writeCache(CACHE_KEYS.performances, records);
 
                 if (changed || !grid.querySelector(".performance-card")) {

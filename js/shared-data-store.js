@@ -145,6 +145,14 @@
                 configure: (collection) => collection.orderBy("date", "desc")
             }
         ),
+        getHomePerformances: () => getCollection(
+            "home-performance-candidates-v1",
+            {
+                collection: "performances",
+                configure: (collection) => collection.orderBy("date", "desc")
+            },
+            (document) => ({ id: document.id, data: document.data() })
+        ),
         getLatestPerformances: (limit = 2) => getCollection(
             `latest-performances-${limit}`,
             {

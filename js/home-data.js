@@ -14,6 +14,7 @@
         writeCache: store.writeCache,
         getHomeContent: store.getHomeContent,
         getArrangements: store.getArrangements,
+        getHomePerformances: store.getHomePerformances,
         getLatestPerformances: store.getLatestPerformances
     });
 })();

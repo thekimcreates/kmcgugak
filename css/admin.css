@@ -546,6 +546,7 @@ body[data-admin-page="about"] .admin-nav [data-admin-page="about"]::after,
 }
 
 .performance-admin-card {
+    position: relative;
     padding: 20px;
     display: flex;
     align-items: center;
@@ -554,6 +555,30 @@ body[data-admin-page="about"] .admin-nav [data-admin-page="about"]::after,
     border: 1px solid rgba(22, 22, 22, 0.09);
     border-radius: 18px;
     background: rgba(255, 255, 255, 0.62);
+}
+
+.performance-admin-card.is-hidden-performance {
+    border-color: rgba(127, 29, 45, 0.34);
+    background: rgba(127, 29, 45, 0.055);
+}
+
+.performance-hidden-badge {
+    position: absolute;
+    z-index: 2;
+    top: 50%;
+    left: 50%;
+    padding: 7px 12px;
+    border: 2px solid rgba(127, 29, 45, 0.72);
+    border-radius: 6px;
+    color: rgba(127, 29, 45, 0.88);
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 3px 12px rgba(64, 10, 20, 0.12);
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.16em;
+    line-height: 1;
+    pointer-events: none;
+    transform: translate(-50%, -50%) rotate(-8deg);
 }
 
 .performance-admin-card-main {

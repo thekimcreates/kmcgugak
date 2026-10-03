@@ -82,6 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const formTitle = get("performance-form-title");
     const idInput = get("performance-id");
     const dateInput = get("performance-date");
+    const hiddenInput = get("performance-hidden");
     const timeInput = get("performance-time");
     const timezoneInput = get("performance-timezone");
     const timeTbd = get("performance-time-tbd");
@@ -955,6 +956,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function createPerformanceCard(record) {
         const article = document.createElement("article");
         article.className = "performance-admin-card";
+        article.classList.toggle("is-hidden-performance", record.hidden === true);
 
         const main = document.createElement("div");
         main.className = "performance-admin-card-main";
@@ -998,6 +1000,13 @@ document.addEventListener("DOMContentLoaded", () => {
         deleteButton.textContent = "Delete";
         deleteButton.addEventListener("click", () => deletePerformance(record));
         actions.append(editButton, deleteButton);
+        if (record.hidden === true) {
+            const hiddenBadge = document.createElement("span");
+            hiddenBadge.className = "performance-hidden-badge";
+            hiddenBadge.textContent = "HIDDEN";
+            hiddenBadge.setAttribute("aria-label", "Hidden from the public performance list");
+            article.append(hiddenBadge);
+        }
         article.append(main, actions);
         return article;
     }
@@ -1020,6 +1029,7 @@ document.addEventListener("DOMContentLoaded", () => {
         editingRecord = record;
         showUploadCode();
         dateInput.value = record.date;
+        hiddenInput.checked = record.hidden === true;
         timeInput.value = record.time || "";
         timezoneInput.value = record.timezone || "America/Los_Angeles";
         timeTbd.checked = Boolean(record.timeTbd);
@@ -1219,6 +1229,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const data = {
                 date: dateInput.value,
+                hidden: hiddenInput.checked,
                 time: timeTbd.checked ? "" : timeInput.value,
                 timeTbd: timeTbd.checked,
                 timezone: timeTbd.checked ? "" : timezoneInput.value,

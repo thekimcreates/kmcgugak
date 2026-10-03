@@ -2,7 +2,7 @@
 (() => {
     // Project only the fields used by cards, filters, and the detail heading.
     // In particular, never fetch galleryItems for the initial performance list.
-    const fields = ["date", "time", "timezone", "timeTbd", "location", "locationName", "locationAddress", "locationPlaceId", "locationTbd", "arrangementIds", "arrangements", "arrangementsTbd", "memberIds", "members", "membersTbd", "externalLinks", "highlightPhotoUrl", "updatedAt"];
+    const fields = ["date", "time", "timezone", "timeTbd", "location", "locationName", "locationAddress", "locationPlaceId", "locationTbd", "arrangementIds", "arrangements", "arrangementsTbd", "memberIds", "members", "membersTbd", "externalLinks", "highlightPhotoUrl", "hidden", "updatedAt"];
     const details = new Map();
     const pending = new Map();
     function decode(value) {

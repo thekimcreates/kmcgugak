@@ -65,6 +65,34 @@
         return article;
     }
 
+    function performanceTime(record) {
+        const performance = record?.data || {};
+        const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(performance.date || ""));
+        if (!dateMatch) return Number.NaN;
+        const timeMatch = !performance.timeTbd && /^(\d{1,2}):(\d{2})/.exec(String(performance.time || ""));
+        // An event without a confirmed time stays upcoming for its full date.
+        const hours = timeMatch ? Number(timeMatch[1]) : 23;
+        const minutes = timeMatch ? Number(timeMatch[2]) : 59;
+        return new Date(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3]), hours, minutes).getTime();
+    }
+
+    function homePerformances(records) {
+        const publicRecords = records
+            .filter((record) => record?.data?.hidden !== true)
+            .sort((a, b) => String(b.data?.date || "").localeCompare(String(a.data?.date || "")));
+        const now = Date.now();
+        const upcoming = publicRecords
+            .filter((record) => performanceTime(record) > now)
+            .sort((a, b) => performanceTime(a) - performanceTime(b));
+        const past = publicRecords.filter((record) => performanceTime(record) <= now);
+
+        // The first card is the left card. Put the nearest upcoming event
+        // there and the most recent completed event on the right. With no
+        // upcoming event, retain the familiar two most-recent-event layout.
+        if (!upcoming.length) return past.slice(0, 2);
+        return [upcoming[0], past[0] || upcoming[1]].filter(Boolean);
+    }
+
     function render() {
         const container = document.getElementById("latest-performances");
         if (!container) return;
@@ -83,10 +111,10 @@
 
     function hydrateCached() {
         const api = window.KMCHomeData;
-        const cachedPerformances = api?.cachedValue("latest-performances-2");
+        const cachedPerformances = api?.cachedValue("home-performance-candidates-v1");
         const cachedArrangements = api?.cachedValue("arrangements");
         if (Array.isArray(cachedPerformances)) {
-            state.performances = cachedPerformances;
+            state.performances = homePerformances(cachedPerformances);
             state.performancesReady = true;
         }
         if (Array.isArray(cachedArrangements?.arrangements)) state.arrangements = cachedArrangements.arrangements;
@@ -97,9 +125,9 @@
         const api = window.KMCHomeData;
         hydrateCached();
         if (!api) return;
-        api.getLatestPerformances(2)
+        api.getHomePerformances()
             .then(records => {
-                state.performances = Array.isArray(records) ? records : [];
+                state.performances = homePerformances(Array.isArray(records) ? records : []);
                 state.performancesReady = true;
                 state.signature = "";
                 render();
