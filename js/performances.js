@@ -627,10 +627,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function startGalleryThumbnail(tile) {
-        if (!tile?.loadGalleryThumbnail) return;
+        if (!tile?.loadGalleryThumbnail) return null;
         const load = tile.loadGalleryThumbnail;
         delete tile.loadGalleryThumbnail;
-        load();
+        return load();
     }
 
     function loadVisibleGalleryThumbnails(root, container) {
@@ -663,6 +663,28 @@ document.addEventListener("DOMContentLoaded", () => {
         root.addEventListener("scroll", refresh, { passive: true });
         root.addEventListener("touchend", refresh, { passive: true });
         window.addEventListener("resize", refresh, { passive: true });
+    }
+
+    function preloadMobileGalleryThumbnails() {
+        const isMobile = window.matchMedia?.("(max-width: 900px), (pointer: coarse)")?.matches
+            ?? window.innerWidth <= 900;
+        if (!isMobile) return;
+
+        const pendingTiles = [...galleryGrid.querySelectorAll("[data-gallery-index]")]
+            .filter((tile) => Boolean(tile.loadGalleryThumbnail));
+        let nextTile = 0;
+        const loadNext = async () => {
+            while (nextTile < pendingTiles.length) {
+                const tile = pendingTiles[nextTile++];
+                const request = startGalleryThumbnail(tile);
+                await request?.promise;
+            }
+        };
+        // Mobile browsers occasionally suspend an observer request after its
+        // tile leaves view. These are only compact gallery previews, and the
+        // bounded queue guarantees that every preview is ready before it can
+        // become a gray placeholder during a later scroll.
+        void Promise.all(Array.from({ length: Math.min(3, pendingTiles.length) }, loadNext));
     }
 
     function createGalleryTile(item, className, index) {
@@ -1128,6 +1150,7 @@ document.addEventListener("DOMContentLoaded", () => {
             loadVisibleGalleryThumbnails(
                 galleryModal.querySelector(".performance-gallery-modal-shell"), galleryGrid
             );
+            preloadMobileGalleryThumbnails();
         });
         if (Number.isInteger(initialIndex)) openGalleryViewer(initialIndex, sourceTile);
         else galleryModalClose.focus({ preventScroll: true });
